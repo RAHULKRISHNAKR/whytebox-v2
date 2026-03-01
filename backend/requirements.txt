@@ -19,10 +19,11 @@ celery==5.4.0
 
 # ML Frameworks — PyTorch only (TensorFlow removed for free-tier compatibility)
 # TensorFlow support available via requirements-tensorflow.txt
-# Using --index-url for CPU-only torch to avoid downloading CUDA builds (~2GB)
+# CPU-only torch from PyTorch wheel index (avoids ~2GB CUDA download)
+# Render (Linux x86_64) resolves torch+cpu from this index automatically
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
-torchvision==0.20.1+cpu
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 timm==1.0.11
 transformers==4.47.1
 
