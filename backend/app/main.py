@@ -7,6 +7,7 @@ A modern neural network visualization and explainability platform.
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from app.api.v1 import api_router
 from app.core.cache import cache_manager
@@ -17,6 +18,8 @@ from app.core.monitoring import metrics_collector, performance_monitor
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # Setup logging
 logger = setup_logging()
@@ -117,23 +120,54 @@ async def monitor_requests(request: Request, call_next):
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/")
-async def root():
-    """Root endpoint - API information"""
-    return {
-        "name": "WhyteBox API",
-        "version": "2.0.0",
-        "description": "Neural Network Visualization & Explainability Platform",
-        "status": "healthy",
-        "docs": "/docs",
-        "redoc": "/redoc",
-    }
-
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring"""
     return {"status": "healthy", "version": "2.0.0", "environment": settings.ENVIRONMENT}
+
+
+# ── Static frontend serving ────────────────────────────────────────────────────
+# Serve the built React frontend from whytebox-v2/frontend/dist/.
+# This allows a single-port local dev setup: backend on :5001 serves both the
+# API (/api/v1/*) and the SPA (everything else).
+# The dist/ path is resolved relative to this file so it works regardless of
+# the working directory uvicorn is started from.
+_FRONTEND_DIST = Path(__file__).parent.parent.parent.parent / "frontend" / "dist"
+
+if _FRONTEND_DIST.exists():
+    # Serve static assets (JS/CSS/images) under /assets
+    app.mount("/assets", StaticFiles(directory=str(_FRONTEND_DIST / "assets")), name="assets")
+
+    @app.get("/")
+    async def serve_spa_root():
+        """Serve the React SPA index.html"""
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_fallback(full_path: str):
+        """SPA fallback — serve index.html for all non-API routes so React Router works."""
+        # Don't intercept API or docs routes
+        if full_path.startswith(("api/", "docs", "redoc", "health", "openapi")):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
+        index = _FRONTEND_DIST / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Frontend not built. Run: cd frontend && npm run build")
+else:
+    @app.get("/")
+    async def root():
+        """Root endpoint — frontend not built yet"""
+        return {
+            "name": "WhyteBox API",
+            "version": "2.0.0",
+            "description": "Neural Network Visualization & Explainability Platform",
+            "status": "healthy",
+            "note": "Frontend not built. Run: cd frontend && npm run build",
+            "docs": "/docs",
+            "redoc": "/redoc",
+        }
 
 
 if __name__ == "__main__":

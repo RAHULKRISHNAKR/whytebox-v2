@@ -15,7 +15,11 @@ class ApiService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+      // Use relative base URL so requests go through the Vite dev-server proxy
+      // (which forwards to localhost:5001). In production, VITE_API_BASE_URL is
+      // set to the full backend origin (e.g. https://api.example.com).
+      // All API methods in this class already include the full /api/v1/... path.
+      baseURL: import.meta.env.VITE_API_BASE_URL || '',
       timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
       headers: {
         'Content-Type': 'application/json',

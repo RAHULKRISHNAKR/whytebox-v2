@@ -44,15 +44,22 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: '0.0.0.0',
-      // Proxy API calls to backend in development
+      // Proxy API calls to backend in development.
+      // Backend runs on port 5001 locally (macOS AirPlay Receiver occupies 5000).
+      // Production uses VITE_API_URL env var — these fallbacks are dev-only.
       proxy: {
+        // Proxy /api/* and /ws/* to the backend.
+        // Use 127.0.0.1 (not localhost) — on macOS with Node 18+, 'localhost' resolves
+        // to IPv6 ::1 first, but uvicorn binds to IPv4 0.0.0.0/127.0.0.1 by default,
+        // causing ECONNREFUSED ::1. Explicit 127.0.0.1 forces IPv4.
+        // VITE_BACKEND_PORT can override the port (default 8000).
         '/api': {
-          target: env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000',
+          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '8000'}`,
           changeOrigin: true,
           secure: false,
         },
         '/ws': {
-          target: env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000',
+          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '8000'}`,
           changeOrigin: true,
           ws: true,
         },

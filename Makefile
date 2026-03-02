@@ -59,16 +59,22 @@ setup: install-dev
 
 # Development
 dev-backend:
-	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 5001
 
 dev-frontend:
 	cd frontend && npm run dev
 
 dev:
 	@echo "Starting development servers..."
-	@echo "Backend: http://localhost:8000"
-	@echo "Frontend: http://localhost:3000"
+	@echo "Backend API + Frontend (built): http://localhost:5001"
+	@echo "Frontend (Vite dev, hot-reload): http://localhost:5173"
 	@make -j2 dev-backend dev-frontend
+
+# Single-port mode: FastAPI on 5001 serves built frontend dist/
+start:
+	@echo "Starting WhyteBox (single-port mode)..."
+	@echo "Open: http://localhost:5001"
+	cd backend && uvicorn app.main:app --host 0.0.0.0 --port 5001
 
 # Code Quality
 lint: lint-backend lint-frontend

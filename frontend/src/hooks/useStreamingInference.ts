@@ -83,13 +83,17 @@ export function useStreamingInference() {
   }, [])
 
   const getWsUrl = (): string => {
-    const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:5001'
-    // VITE_API_URL already includes /api/v1 (e.g. https://host.onrender.com/api/v1).
-    // Strip any trailing /api/vN path so we don't double it, then convert
-    // http(s):// → ws(s):// and append the full WebSocket path.
-    const origin = apiBase.replace(/\/api\/v\d+\/?$/, '')
-    const wsBase = origin.replace(/^http/, 'ws')
-    return `${wsBase}/api/v1/ws/inference`
+    if (import.meta.env.VITE_API_URL) {
+      // Production: VITE_API_URL is the full REST base (e.g. https://host.onrender.com/api/v1).
+      // Strip /api/vN suffix, convert http(s) → ws(s), append WS path.
+      const origin = import.meta.env.VITE_API_URL.replace(/\/api\/v\d+\/?$/, '')
+      const wsBase = origin.replace(/^http/, 'ws')
+      return `${wsBase}/api/v1/ws/inference`
+    }
+    // Development: derive from the page's own origin so it works on any host/port
+    // (localhost, LAN IP, remote dev server, etc.) and goes through the Vite proxy.
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    return `${proto}://${window.location.host}/api/v1/ws/inference`
   }
 
   /**

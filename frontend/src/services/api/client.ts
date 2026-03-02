@@ -13,10 +13,13 @@ import { addNotification } from '@/store/slices/uiSlice'
 import { logout } from '@/store/slices/authSlice'
 
 // Create axios instance
-// VITE_API_URL is the full base URL including /api/v1 path (set at build time).
-// Falls back to localhost:8000/api/v1 for local development.
+// VITE_API_URL is the full base URL including /api/v1 path (set at build time for production).
+// In development (no VITE_API_URL set) we use a RELATIVE path '/api/v1' so all requests
+// route through the Vite dev-server proxy → localhost:5001 (backend port on macOS).
+// Using a relative URL avoids Chrome's Private Network Access (PNA) block that fires when
+// the page is served from a non-localhost IP and JS tries to reach http://localhost directly.
 // Env var name matches .env.prod.example and docker-compose.prod.yml VITE_API_URL.
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
