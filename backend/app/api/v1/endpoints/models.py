@@ -15,6 +15,7 @@ from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from ....services.model_service import PRETRAINED_MODELS, ArchitectureExtractor, model_registry
+from ....services.static_architectures import get_static_architecture
 
 logger = logging.getLogger(__name__)
 
@@ -203,30 +204,43 @@ async def get_model_stats(model_id: str) -> Dict[str, Any]:
 async def get_model_architecture(model_id: str) -> Dict[str, Any]:
     """
     Get full architecture of a model with layer details.
-    Loads the model if not already cached.
-    Returns structured data for 3D visualization.
+
+    For pretrained models: returns pre-computed static architecture data
+    instantly (no model loading, no weight download — safe for free-tier hosting).
+
+    For custom uploaded models: loads the model and extracts architecture live.
+    Falls back to static data if live extraction fails.
     """
+    # ── Fast path: static pre-computed data for pretrained models ────────────
+    static_arch = get_static_architecture(model_id)
+    if static_arch is not None:
+        logger.info(f"Returning static architecture for pretrained model: {model_id}")
+        return {
+            "success": True,
+            "model_id": model_id,
+            "source": "static",
+            **static_arch,
+        }
+
+    # ── Custom uploaded model: live extraction ────────────────────────────────
+    if model_id not in _custom_models:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+
     try:
-        # Load model (from cache or fresh)
-        if model_id in PRETRAINED_MODELS:
-            model, metadata = model_registry.load_pretrained(model_id)
-        elif model_id in _custom_models:
-            from ....schemas.model import Framework
-            from ....utils.model_loader import ModelLoader
+        from ....schemas.model import Framework
+        from ....utils.model_loader import ModelLoader
 
-            path = _custom_models[model_id]["path"]
-            framework = _custom_models[model_id]["metadata"].get("framework", "pytorch")
-            fw = Framework(framework)
-            model, _ = ModelLoader.load_model(path, fw)
-        else:
-            raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+        path = _custom_models[model_id]["path"]
+        framework = _custom_models[model_id]["metadata"].get("framework", "pytorch")
+        fw = Framework(framework)
+        model, _ = ModelLoader.load_model(path, fw)
 
-        # Extract architecture
         arch = ArchitectureExtractor.extract(model, model_id)
 
         return {
             "success": True,
             "model_id": model_id,
+            "source": "live",
             **arch,
         }
 

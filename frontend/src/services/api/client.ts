@@ -60,6 +60,10 @@ apiClient.interceptors.response.use(
     return response
   },
   (error: AxiosError<{ detail?: string; message?: string }>) => {
+    // If the request was tagged with x-skip-error-toast, suppress all global
+    // notifications — the calling component handles the error inline.
+    const skipToast = error.config?.headers?.['x-skip-error-toast'] === '1'
+
     // Handle different error types
     if (error.response) {
       const { status, data } = error.response
@@ -68,72 +72,84 @@ apiClient.interceptors.response.use(
       // Handle authentication errors
       if (status === 401) {
         store.dispatch(logout())
-        store.dispatch(
-          addNotification({
-            type: 'error',
-            message: 'Session expired. Please log in again.',
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'error',
+              message: 'Session expired. Please log in again.',
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle forbidden errors
       else if (status === 403) {
-        store.dispatch(
-          addNotification({
-            type: 'error',
-            message: 'You do not have permission to perform this action.',
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'error',
+              message: 'You do not have permission to perform this action.',
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle not found errors
       else if (status === 404) {
-        store.dispatch(
-          addNotification({
-            type: 'error',
-            message: 'Resource not found.',
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'error',
+              message: 'Resource not found.',
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle validation errors
       else if (status === 422) {
-        store.dispatch(
-          addNotification({
-            type: 'error',
-            message: `Validation error: ${message}`,
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'error',
+              message: `Validation error: ${message}`,
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle rate limiting
       else if (status === 429) {
-        store.dispatch(
-          addNotification({
-            type: 'warning',
-            message: 'Too many requests. Please try again later.',
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'warning',
+              message: 'Too many requests. Please try again later.',
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle server errors
       else if (status >= 500) {
-        store.dispatch(
-          addNotification({
-            type: 'error',
-            message: 'Server error. Please try again later.',
-            duration: 5000,
-          })
-        )
+        if (!skipToast) {
+          store.dispatch(
+            addNotification({
+              type: 'error',
+              message: 'Server error. Please try again later.',
+              duration: 5000,
+            })
+          )
+        }
       }
 
       // Handle other errors
-      else {
+      else if (!skipToast) {
         store.dispatch(
           addNotification({
             type: 'error',
@@ -149,23 +165,27 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       // Network error
-      store.dispatch(
-        addNotification({
-          type: 'error',
-          message: 'Network error. Please check your connection.',
-          duration: 5000,
-        })
-      )
+      if (!skipToast) {
+        store.dispatch(
+          addNotification({
+            type: 'error',
+            message: 'Network error. Please check your connection.',
+            duration: 5000,
+          })
+        )
+      }
       console.error('[API Network Error]', error.request)
     } else {
       // Other errors
-      store.dispatch(
-        addNotification({
-          type: 'error',
-          message: error.message || 'An unexpected error occurred.',
-          duration: 5000,
-        })
-      )
+      if (!skipToast) {
+        store.dispatch(
+          addNotification({
+            type: 'error',
+            message: error.message || 'An unexpected error occurred.',
+            duration: 5000,
+          })
+        )
+      }
       console.error('[API Error]', error.message)
     }
 

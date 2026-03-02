@@ -62,10 +62,19 @@ export const modelsApi = {
   },
 
   /**
-   * Get full architecture (layers, connections, visualization hints)
+   * Get full architecture (layers, connections, visualization hints).
+   * Uses a longer timeout (120s) since custom model extraction can be slow.
+   * The `x-skip-error-toast` header tells the axios interceptor not to show
+   * a global error notification — ModelViewer handles the error inline.
    */
   getModelArchitecture: async (id: string): Promise<ModelArchitectureResponse> => {
-    const response = await apiClient.get<ModelArchitectureResponse>(`/models/${id}/architecture`)
+    const response = await apiClient.get<ModelArchitectureResponse>(
+      `/models/${id}/architecture`,
+      {
+        timeout: 120_000,
+        headers: { 'x-skip-error-toast': '1' },
+      },
+    )
     return response.data
   },
 
