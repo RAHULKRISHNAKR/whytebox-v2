@@ -15,7 +15,7 @@ from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from ....services.model_service import PRETRAINED_MODELS, ArchitectureExtractor, model_registry
-from ....services.static_architectures import get_static_architecture
+from ....services.static_architectures import get_static_architecture, get_static_layers
 
 logger = logging.getLogger(__name__)
 
@@ -257,38 +257,51 @@ async def get_model_architecture(model_id: str) -> Dict[str, Any]:
 async def get_model_layers(model_id: str) -> Dict[str, Any]:
     """
     Get list of layer names (useful for Grad-CAM target layer selection).
+
+    For pretrained models: returns pre-computed static layer lists instantly
+    (no model loading, no weight download — safe for free-tier hosting).
+
+    For custom uploaded models: loads the model and extracts layers live.
     """
+    # ── Fast path: static pre-computed data for pretrained models ────────────
+    static_layers = get_static_layers(model_id)
+    if static_layers is not None:
+        logger.info(f"Returning static layers for pretrained model: {model_id}")
+        return {
+            "success": True,
+            "model_id": model_id,
+            "source": "static",
+            "total_layers": len(static_layers["all_layers"]),
+            "all_layers": static_layers["all_layers"],
+            "conv_layers": static_layers["conv_layers"],
+            "recommended_layers": static_layers["recommended_layers"],
+            "default_target_layer": static_layers["default_target_layer"],
+        }
+
+    # ── Custom uploaded model: live extraction ────────────────────────────────
+    if model_id not in _custom_models:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+
     try:
-        if model_id in PRETRAINED_MODELS:
-            model, _ = model_registry.load_pretrained(model_id)
-        elif model_id in _custom_models:
-            from ....schemas.model import Framework
-            from ....utils.model_loader import ModelLoader
+        from ....schemas.model import Framework
+        from ....utils.model_loader import ModelLoader
 
-            path = _custom_models[model_id]["path"]
-            fw = Framework(_custom_models[model_id]["metadata"].get("framework", "pytorch"))
-            model, _ = ModelLoader.load_model(path, fw)
-        else:
-            raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+        path = _custom_models[model_id]["path"]
+        fw = Framework(_custom_models[model_id]["metadata"].get("framework", "pytorch"))
+        model, _ = ModelLoader.load_model(path, fw)
 
-        # Get all named modules
         all_layers = [name for name, _ in model.named_modules() if name]
-
-        # Filter for conv layers (good Grad-CAM targets)
         conv_layers = [
             name
             for name, mod in model.named_modules()
             if name and type(mod).__name__ in ("Conv2d", "ConvTranspose2d")
         ]
-
-        # Get default target layer
-        default_layer = PRETRAINED_MODELS.get(model_id, {}).get("default_target_layer")
-        if not default_layer and conv_layers:
-            default_layer = conv_layers[-1]
+        default_layer = conv_layers[-1] if conv_layers else (all_layers[-1] if all_layers else None)
 
         return {
             "success": True,
             "model_id": model_id,
+            "source": "live",
             "total_layers": len(all_layers),
             "all_layers": all_layers,
             "conv_layers": conv_layers,
