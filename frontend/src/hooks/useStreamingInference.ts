@@ -84,8 +84,11 @@ export function useStreamingInference() {
 
   const getWsUrl = (): string => {
     const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:5001'
-    // Convert http(s):// → ws(s)://
-    const wsBase = apiBase.replace(/^http/, 'ws')
+    // VITE_API_URL already includes /api/v1 (e.g. https://host.onrender.com/api/v1).
+    // Strip any trailing /api/vN path so we don't double it, then convert
+    // http(s):// → ws(s):// and append the full WebSocket path.
+    const origin = apiBase.replace(/\/api\/v\d+\/?$/, '')
+    const wsBase = origin.replace(/^http/, 'ws')
     return `${wsBase}/api/v1/ws/inference`
   }
 

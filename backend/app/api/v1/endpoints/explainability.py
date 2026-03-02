@@ -7,6 +7,7 @@ Supports Grad-CAM, Saliency Maps, and Integrated Gradients.
 
 import base64
 import logging
+import os
 import time
 from io import BytesIO
 from typing import Any, Dict, List, Optional
@@ -16,8 +17,13 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from PIL import Image
 
 from ....services.model_service import PRETRAINED_MODELS, model_registry
+from ....services.static_architectures import get_static_layers
 from ....utils.preprocessing import ImagePreprocessor, NormalizationMethod
 from ....utils.visualization import ExplainabilityVisualizer
+
+# When DEMO_MODE=true the /compare endpoint returns a structured placeholder
+# response without loading model weights — safe for free-tier hosting.
+_DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() in ("1", "true", "yes")
 
 logger = logging.getLogger(__name__)
 
@@ -538,7 +544,50 @@ async def compare_methods(
 ) -> Dict[str, Any]:
     """
     Run all explainability methods and return comparison.
+
+    When DEMO_MODE=true (set via env var) returns a structured placeholder
+    response without loading model weights — safe for free-tier hosting.
     """
+    # ── Demo / free-tier fast path ────────────────────────────────────────────
+    if _DEMO_MODE:
+        logger.info(f"DEMO_MODE: returning placeholder compare result for {model_id}")
+        return {
+            "success": True,
+            "demo_mode": True,
+            "model_id": model_id,
+            "predicted_class": 0,
+            "predicted_class_name": "demo_class",
+            "confidence": 0.0,
+            "num_methods": 3,
+            "methods": {
+                "gradcam": {
+                    "name": "Grad-CAM",
+                    "overlay": "",
+                    "heatmap_data": [],
+                    "compute_time_ms": 0,
+                    "demo": True,
+                },
+                "saliency": {
+                    "name": "Saliency Map",
+                    "overlay": "",
+                    "heatmap_data": [],
+                    "compute_time_ms": 0,
+                    "demo": True,
+                },
+                "integrated_gradients": {
+                    "name": "Integrated Gradients",
+                    "overlay": "",
+                    "heatmap_data": [],
+                    "compute_time_ms": 0,
+                    "demo": True,
+                },
+            },
+            "message": (
+                "Demo mode active — deploy with DEMO_MODE=false and sufficient RAM "
+                "to enable real explainability computation."
+            ),
+        }
+
     try:
         import torch
 
@@ -549,7 +598,28 @@ async def compare_methods(
         h, w = map(int, target_size.split(","))
         processed = _preprocess_image(original_array, (h, w))
 
-        model, metadata, framework = _load_model_by_id(model_id)
+        # Load model — wrap so any OOM/timeout returns HTTP 503 (not a worker
+        # crash that would prevent CORS headers from being sent).
+        try:
+            model, metadata, framework = _load_model_by_id(model_id)
+        except HTTPException:
+            raise
+        except MemoryError as exc:
+            logger.error(f"OOM loading model {model_id} for compare: {exc}")
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"Insufficient memory to load model '{model_id}'. "
+                    "Try a smaller model or enable DEMO_MODE."
+                ),
+            )
+        except Exception as exc:
+            logger.error(f"Failed to load model {model_id} for compare: {exc}", exc_info=True)
+            raise HTTPException(
+                status_code=503,
+                detail=f"Could not load model '{model_id}': {exc}",
+            )
+
         if framework != "pytorch":
             raise HTTPException(status_code=400, detail="Only PyTorch models supported")
 
@@ -719,7 +789,31 @@ async def get_available_layers(
     model_id: str,
     device: str = "cpu",
 ) -> Dict[str, Any]:
-    """Get list of available layers for Grad-CAM target selection."""
+    """
+    Get list of available layers for Grad-CAM target selection.
+
+    Uses pre-computed static data for pretrained models to avoid loading
+    model weights (which would crash the free-tier worker before CORS
+    headers are sent).  Falls back to live extraction for custom models.
+    """
+    # ── Static fast path for pretrained models ────────────────────────────────
+    static = get_static_layers(model_id)
+    if static is not None:
+        all_layers = [lay["id"] for lay in static]
+        conv_layers = [lay["id"] for lay in static if lay.get("category") == "conv"]
+        default = PRETRAINED_MODELS.get(model_id, {}).get("default_target_layer")
+        return {
+            "success": True,
+            "model_id": model_id,
+            "total_layers": len(all_layers),
+            "all_layers": all_layers,
+            "conv_layers": conv_layers,
+            "recommended_layers": conv_layers[-5:] if conv_layers else all_layers[-5:],
+            "default_target_layer": default,
+            "source": "static",
+        }
+
+    # ── Live extraction for custom uploaded models ────────────────────────────
     try:
         model, metadata, framework = _load_model_by_id(model_id)
 
@@ -744,6 +838,7 @@ async def get_available_layers(
             "conv_layers": conv_layers,
             "recommended_layers": conv_layers[-5:] if conv_layers else all_layers[-5:],
             "default_target_layer": default,
+            "source": "live",
         }
 
     except HTTPException:

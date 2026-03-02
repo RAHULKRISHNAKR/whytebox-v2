@@ -96,5 +96,10 @@ services:
       # Token expiry
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "60"
+      # Demo mode — prevents /explainability/compare from loading model weights
+      # on the free tier (512MB RAM cannot hold ResNet-50/VGG16 weights).
+      # Set to "false" on a paid plan with ≥2GB RAM to enable real inference.
+      - key: DEMO_MODE
+        value: "true"
 
 # Made with Bob
