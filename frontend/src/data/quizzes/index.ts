@@ -6,6 +6,9 @@
 import { Quiz, QuizFilters, QuizSortBy, QuizResult } from '../../types/quiz';
 import { gradcamBasicsQuiz } from './gradcam-basics';
 import { neuralNetworksIntroQuiz } from './neural-networks-intro';
+import { transformersAttentionQuiz } from './transformers-attention';
+import { integratedGradientsQuiz } from './integrated-gradients';
+import { modelArchitectureQuiz } from './model-architecture';
 
 /**
  * All available quizzes
@@ -13,6 +16,9 @@ import { neuralNetworksIntroQuiz } from './neural-networks-intro';
 export const allQuizzes: Quiz[] = [
   neuralNetworksIntroQuiz,
   gradcamBasicsQuiz,
+  transformersAttentionQuiz,
+  integratedGradientsQuiz,
+  modelArchitectureQuiz,
 ];
 
 /**

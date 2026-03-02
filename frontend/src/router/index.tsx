@@ -34,6 +34,9 @@ const TutorialsPage = lazy(() => import('@/pages/TutorialsPage'))
 const Tutorials = lazy(() =>
   import('@/pages/tutorials/Tutorials').then((m) => ({ default: m.Tutorials }))
 )
+const TutorialViewer = lazy(() =>
+  import('@/pages/tutorials/TutorialViewer').then((m) => ({ default: m.TutorialViewer }))
+)
 const LearningPaths = lazy(() =>
   import('@/pages/learningPaths/LearningPaths').then((m) => ({ default: m.LearningPaths }))
 )
@@ -118,6 +121,10 @@ export const router = createBrowserRouter([
       {
         path: 'tutorials/browse',
         element: <LazyRoute><Tutorials /></LazyRoute>,
+      },
+      {
+        path: 'tutorials/:id',
+        element: <LazyRoute><TutorialViewer /></LazyRoute>,
       },
       {
         path: 'learning-paths',

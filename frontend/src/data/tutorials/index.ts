@@ -8,6 +8,8 @@ import { gettingStartedTutorial } from './getting-started';
 import { understandingGradCAMTutorial } from './understanding-gradcam';
 import { modelArchitectureTutorial } from './model-architecture';
 import { comparingMethodsTutorial } from './comparing-methods';
+import { transformersAttentionTutorial } from './transformers-and-attention';
+import { integratedGradientsDeepDiveTutorial } from './integrated-gradients-deepdive';
 
 /**
  * All available tutorials
@@ -17,6 +19,8 @@ export const allTutorials: Tutorial[] = [
   understandingGradCAMTutorial,
   modelArchitectureTutorial,
   comparingMethodsTutorial,
+  transformersAttentionTutorial,
+  integratedGradientsDeepDiveTutorial,
 ];
 
 /**

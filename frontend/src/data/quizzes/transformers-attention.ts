@@ -1,0 +1,137 @@
+/**
+ * Transformers & Attention Mechanisms Quiz
+ * Tests understanding of transformer architecture and attention
+ */
+
+import { Quiz } from '../../types/quiz';
+
+export const transformersAttentionQuiz: Quiz = {
+  id: 'transformers-attention',
+  title: 'Transformers & Attention Mechanisms',
+  description: 'Test your understanding of transformer architecture, self-attention, multi-head attention, and how models like BERT and GPT-2 work.',
+  category: 'Architecture',
+  difficulty: 'medium',
+  estimatedTime: 20,
+  passingScore: 70,
+  tags: ['transformers', 'attention', 'bert', 'gpt', 'nlp', 'architecture'],
+  prerequisites: ['neural-networks-intro'],
+  questions: [
+    {
+      id: 'q1',
+      type: 'multiple-choice',
+      difficulty: 'easy',
+      question: 'What is the core mechanism that makes Transformer models powerful?',
+      explanation: 'Self-attention (also called scaled dot-product attention) allows each token to attend to every other token in the sequence, capturing long-range dependencies without recurrence.',
+      points: 10,
+      options: [
+        { id: 'a', text: 'Recurrent connections between time steps', isCorrect: false },
+        { id: 'b', text: 'Self-attention over the entire input sequence', isCorrect: true },
+        { id: 'c', text: 'Convolutional filters applied to token embeddings', isCorrect: false },
+        { id: 'd', text: 'Gated memory cells like LSTM', isCorrect: false },
+      ],
+      tags: ['attention', 'basics'],
+    },
+    {
+      id: 'q2',
+      type: 'true-false',
+      difficulty: 'easy',
+      question: 'Transformers process tokens sequentially, one at a time, like RNNs.',
+      explanation: 'False. Transformers process all tokens in parallel using self-attention, which is one of their key advantages over RNNs. This parallelism makes training much faster on modern hardware.',
+      points: 10,
+      correctAnswer: false,
+      tags: ['basics', 'parallelism'],
+    },
+    {
+      id: 'q3',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'In the attention formula Attention(Q, K, V) = softmax(QK^T / √d_k)V, what does √d_k represent?',
+      explanation: 'The scaling factor √d_k (square root of the key dimension) prevents the dot products from growing too large in magnitude, which would push the softmax into regions with very small gradients.',
+      points: 15,
+      options: [
+        { id: 'a', text: 'The number of attention heads', isCorrect: false },
+        { id: 'b', text: 'A scaling factor to prevent vanishing gradients in softmax', isCorrect: true },
+        { id: 'c', text: 'The vocabulary size', isCorrect: false },
+        { id: 'd', text: 'The sequence length', isCorrect: false },
+      ],
+      hints: ['Think about what happens to dot products as dimension grows'],
+      tags: ['attention', 'formula', 'technical'],
+    },
+    {
+      id: 'q4',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'What is the purpose of Multi-Head Attention compared to single-head attention?',
+      explanation: 'Multi-head attention runs attention multiple times in parallel with different learned projections, allowing the model to jointly attend to information from different representation subspaces at different positions.',
+      points: 15,
+      options: [
+        { id: 'a', text: 'To reduce computational cost by splitting the computation', isCorrect: false },
+        { id: 'b', text: 'To attend to different aspects of the input simultaneously', isCorrect: true },
+        { id: 'c', text: 'To handle longer sequences by chunking them', isCorrect: false },
+        { id: 'd', text: 'To prevent overfitting through ensemble averaging', isCorrect: false },
+      ],
+      hints: ['Think about what "different representation subspaces" means'],
+      tags: ['multi-head', 'architecture'],
+    },
+    {
+      id: 'q5',
+      type: 'true-false',
+      difficulty: 'medium',
+      question: 'BERT is trained using a causal (left-to-right) language modeling objective like GPT.',
+      explanation: 'False. BERT uses Masked Language Modeling (MLM) and Next Sentence Prediction (NSP), which allow it to be bidirectional — it sees context from both left and right. GPT uses causal (autoregressive) left-to-right language modeling.',
+      points: 15,
+      correctAnswer: false,
+      tags: ['bert', 'gpt', 'training'],
+    },
+    {
+      id: 'q6',
+      type: 'fill-in-blank',
+      difficulty: 'medium',
+      question: 'In a Transformer, ___ encoding is added to token embeddings to give the model information about token positions.',
+      explanation: 'Positional encoding is added to token embeddings because self-attention is permutation-invariant — without it, the model cannot distinguish token order. Sinusoidal or learned positional encodings are common choices.',
+      points: 15,
+      template: 'In a Transformer, ___ encoding is added to token embeddings to give the model information about token positions.',
+      correctAnswers: ['positional', 'position'],
+      caseSensitive: false,
+      tags: ['positional-encoding', 'architecture'],
+    },
+    {
+      id: 'q7',
+      type: 'multiple-choice',
+      difficulty: 'hard',
+      question: 'In Vision Transformer (ViT), how is an image prepared before being fed into the transformer encoder?',
+      explanation: 'ViT splits the image into fixed-size patches (e.g., 16×16 pixels), flattens each patch, and linearly projects them into embeddings. A [CLS] token is prepended and positional embeddings are added before the transformer encoder.',
+      points: 20,
+      options: [
+        { id: 'a', text: 'The image is processed by a CNN backbone first, then the feature map is fed in', isCorrect: false },
+        { id: 'b', text: 'The image is split into fixed-size patches, each flattened and linearly projected', isCorrect: true },
+        { id: 'c', text: 'Each pixel is treated as a separate token', isCorrect: false },
+        { id: 'd', text: 'The image is converted to a 1D signal using Fourier transforms', isCorrect: false },
+      ],
+      hints: [
+        'Think about how ViT handles spatial structure',
+        'The patch size in ViT-B/16 is 16×16 pixels',
+      ],
+      tags: ['vit', 'vision-transformer', 'advanced'],
+    },
+    {
+      id: 'q8',
+      type: 'multiple-choice',
+      difficulty: 'hard',
+      question: 'What does the attention heatmap in WhyteBox show for a transformer model?',
+      explanation: 'The attention heatmap shows the attention weight matrix for a selected layer and head — each cell (i, j) represents how much token i attends to token j. Brighter cells indicate stronger attention relationships.',
+      points: 20,
+      options: [
+        { id: 'a', text: 'The gradient magnitude for each input token', isCorrect: false },
+        { id: 'b', text: 'The attention weight matrix showing how tokens attend to each other', isCorrect: true },
+        { id: 'c', text: 'The loss surface around the current model weights', isCorrect: false },
+        { id: 'd', text: 'The activation values of the feed-forward layers', isCorrect: false },
+      ],
+      tags: ['attention-visualization', 'whytebox', 'advanced'],
+    },
+  ],
+  createdAt: new Date('2024-02-01'),
+  updatedAt: new Date('2024-02-01'),
+};
+
+// Made with Bob

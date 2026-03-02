@@ -1,0 +1,140 @@
+/**
+ * CNN Model Architecture Quiz
+ * Tests understanding of CNN architectures: ResNet, VGG, MobileNet, EfficientNet
+ */
+
+import { Quiz } from '../../types/quiz';
+
+export const modelArchitectureQuiz: Quiz = {
+  id: 'model-architecture',
+  title: 'CNN Model Architectures',
+  description: 'Test your knowledge of popular CNN architectures including ResNet, VGG16, MobileNetV2, and EfficientNet — their design choices, trade-offs, and innovations.',
+  category: 'Architecture',
+  difficulty: 'medium',
+  estimatedTime: 18,
+  passingScore: 65,
+  tags: ['cnn', 'resnet', 'vgg', 'mobilenet', 'efficientnet', 'architecture'],
+  prerequisites: ['neural-networks-intro'],
+  questions: [
+    {
+      id: 'q1',
+      type: 'multiple-choice',
+      difficulty: 'easy',
+      question: 'What problem did ResNet solve that allowed training of very deep networks (100+ layers)?',
+      explanation: 'ResNet introduced skip connections (residual connections) that allow gradients to flow directly through the network, solving the vanishing gradient problem that made very deep networks hard to train.',
+      points: 10,
+      options: [
+        { id: 'a', text: 'Overfitting on small datasets', isCorrect: false },
+        { id: 'b', text: 'Vanishing gradients in very deep networks via skip connections', isCorrect: true },
+        { id: 'c', text: 'Slow inference speed on mobile devices', isCorrect: false },
+        { id: 'd', text: 'High memory usage during training', isCorrect: false },
+      ],
+      tags: ['resnet', 'skip-connections', 'basics'],
+    },
+    {
+      id: 'q2',
+      type: 'true-false',
+      difficulty: 'easy',
+      question: 'VGG16 uses very small 3×3 convolutional filters throughout the network.',
+      explanation: 'True. VGG16\'s key insight was that stacking multiple 3×3 convolutions achieves the same receptive field as larger filters (e.g., two 3×3 = one 5×5) but with fewer parameters and more non-linearity.',
+      points: 10,
+      correctAnswer: true,
+      tags: ['vgg', 'basics'],
+    },
+    {
+      id: 'q3',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'What is a "depthwise separable convolution" used in MobileNetV2?',
+      explanation: 'A depthwise separable convolution splits a standard convolution into a depthwise convolution (one filter per input channel) followed by a pointwise 1×1 convolution. This dramatically reduces computation and parameters.',
+      points: 15,
+      options: [
+        { id: 'a', text: 'A convolution that only operates on the depth (channel) dimension', isCorrect: false },
+        { id: 'b', text: 'A depthwise convolution per channel followed by a 1×1 pointwise convolution', isCorrect: true },
+        { id: 'c', text: 'A convolution with separable horizontal and vertical filters', isCorrect: false },
+        { id: 'd', text: 'A convolution that skips alternate layers for efficiency', isCorrect: false },
+      ],
+      hints: ['Think about how to factorize a standard convolution into two cheaper operations'],
+      tags: ['mobilenet', 'depthwise-separable', 'efficiency'],
+    },
+    {
+      id: 'q4',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'EfficientNet scales the network using "compound scaling". What three dimensions does it scale simultaneously?',
+      explanation: 'EfficientNet uses compound scaling to uniformly scale width (number of channels), depth (number of layers), and resolution (input image size) using a fixed set of scaling coefficients.',
+      points: 15,
+      options: [
+        { id: 'a', text: 'Learning rate, batch size, and number of epochs', isCorrect: false },
+        { id: 'b', text: 'Width (channels), depth (layers), and resolution (image size)', isCorrect: true },
+        { id: 'c', text: 'Kernel size, stride, and padding', isCorrect: false },
+        { id: 'd', text: 'Dropout rate, weight decay, and data augmentation', isCorrect: false },
+      ],
+      hints: ['Think about the three architectural dimensions of a CNN'],
+      tags: ['efficientnet', 'compound-scaling'],
+    },
+    {
+      id: 'q5',
+      type: 'matching',
+      difficulty: 'medium',
+      question: 'Match each model with its approximate parameter count:',
+      explanation: 'AlexNet: 61M, VGG16: 138M (largest), ResNet-50: 25.6M, MobileNetV2: 3.5M (smallest — designed for mobile). EfficientNet-B0: 5.3M.',
+      points: 15,
+      pairs: [
+        { id: 'p1', left: 'VGG16', right: '138M parameters' },
+        { id: 'p2', left: 'ResNet-50', right: '25.6M parameters' },
+        { id: 'p3', left: 'MobileNetV2', right: '3.5M parameters' },
+        { id: 'p4', left: 'EfficientNet-B0', right: '5.3M parameters' },
+      ],
+      tags: ['parameters', 'comparison'],
+    },
+    {
+      id: 'q6',
+      type: 'true-false',
+      difficulty: 'medium',
+      question: 'In ResNet, the skip connection adds the input of a block directly to its output before the activation function.',
+      explanation: 'True. The residual connection computes F(x) + x, where F(x) is the block\'s transformation and x is the identity shortcut. The ReLU activation is applied after the addition.',
+      points: 15,
+      correctAnswer: true,
+      tags: ['resnet', 'residual-connection', 'technical'],
+    },
+    {
+      id: 'q7',
+      type: 'multiple-choice',
+      difficulty: 'hard',
+      question: 'What is the "inverted residual" structure in MobileNetV2?',
+      explanation: 'Unlike ResNet\'s bottleneck (wide → narrow → wide), MobileNetV2 uses an inverted residual (narrow → wide → narrow): it expands channels with a 1×1 conv, applies depthwise conv, then projects back to narrow channels. The skip connection connects the narrow layers.',
+      points: 20,
+      options: [
+        { id: 'a', text: 'A residual connection that subtracts instead of adds the shortcut', isCorrect: false },
+        { id: 'b', text: 'An expansion from narrow to wide channels, then projection back to narrow, with skip on narrow layers', isCorrect: true },
+        { id: 'c', text: 'A skip connection that goes backwards through the network', isCorrect: false },
+        { id: 'd', text: 'A residual block where the skip connection passes through a 1×1 convolution', isCorrect: false },
+      ],
+      hints: [
+        'Compare to ResNet\'s bottleneck: wide → narrow → wide',
+        'MobileNetV2 does the opposite',
+      ],
+      tags: ['mobilenet', 'inverted-residual', 'advanced'],
+    },
+    {
+      id: 'q8',
+      type: 'multiple-choice',
+      difficulty: 'hard',
+      question: 'In the WhyteBox 3D visualization, what shape represents a convolutional layer?',
+      explanation: 'In WhyteBox\'s BabylonJS 3D scene, convolutional layers are represented as boxes (rectangular prisms), dense/fully-connected layers as spheres, attention heads as diamonds, and feed-forward transformer layers as hexagonal prisms.',
+      points: 20,
+      options: [
+        { id: 'a', text: 'Sphere', isCorrect: false },
+        { id: 'b', text: 'Box (rectangular prism)', isCorrect: true },
+        { id: 'c', text: 'Diamond', isCorrect: false },
+        { id: 'd', text: 'Cylinder', isCorrect: false },
+      ],
+      tags: ['whytebox', 'visualization', 'advanced'],
+    },
+  ],
+  createdAt: new Date('2024-02-15'),
+  updatedAt: new Date('2024-02-15'),
+};
+
+// Made with Bob

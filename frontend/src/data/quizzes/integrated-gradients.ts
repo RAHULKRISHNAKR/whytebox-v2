@@ -1,0 +1,137 @@
+/**
+ * Integrated Gradients Quiz
+ * Tests understanding of the Integrated Gradients explainability method
+ */
+
+import { Quiz } from '../../types/quiz';
+
+export const integratedGradientsQuiz: Quiz = {
+  id: 'integrated-gradients',
+  title: 'Integrated Gradients',
+  description: 'Test your understanding of Integrated Gradients — a principled attribution method that satisfies sensitivity and implementation invariance axioms.',
+  category: 'Explainability',
+  difficulty: 'hard',
+  estimatedTime: 20,
+  passingScore: 70,
+  tags: ['integrated-gradients', 'explainability', 'attribution', 'axioms', 'advanced'],
+  prerequisites: ['gradcam-basics'],
+  questions: [
+    {
+      id: 'q1',
+      type: 'multiple-choice',
+      difficulty: 'easy',
+      question: 'What is the main idea behind Integrated Gradients?',
+      explanation: 'Integrated Gradients accumulates (integrates) gradients along a straight path from a baseline input (e.g., all zeros) to the actual input. This gives each feature a credit score for the model\'s prediction.',
+      points: 10,
+      options: [
+        { id: 'a', text: 'Computing gradients at the final convolutional layer only', isCorrect: false },
+        { id: 'b', text: 'Integrating gradients along a path from a baseline to the input', isCorrect: true },
+        { id: 'c', text: 'Averaging gradients across multiple random perturbations', isCorrect: false },
+        { id: 'd', text: 'Using second-order derivatives to measure feature importance', isCorrect: false },
+      ],
+      tags: ['basics', 'concept'],
+    },
+    {
+      id: 'q2',
+      type: 'multiple-choice',
+      difficulty: 'easy',
+      question: 'What is the "baseline" in Integrated Gradients?',
+      explanation: 'The baseline is a reference input that represents the absence of information — typically a black image (all zeros) for vision models or a zero-embedding vector for NLP. The attribution measures the difference in prediction from baseline to actual input.',
+      points: 10,
+      options: [
+        { id: 'a', text: 'The model\'s average prediction across the training set', isCorrect: false },
+        { id: 'b', text: 'A reference input representing absence of information (e.g., all zeros)', isCorrect: true },
+        { id: 'c', text: 'The ground truth label for the input', isCorrect: false },
+        { id: 'd', text: 'The mean image from the training dataset', isCorrect: false },
+      ],
+      hints: ['Think about what "no information" looks like for an image'],
+      tags: ['baseline', 'concept'],
+    },
+    {
+      id: 'q3',
+      type: 'true-false',
+      difficulty: 'medium',
+      question: 'Integrated Gradients satisfies the "Sensitivity" axiom, meaning if a feature changes the prediction, it will receive non-zero attribution.',
+      explanation: 'True. Sensitivity is one of the two key axioms from Sundararajan et al. (2017). It states that if the baseline and input differ in one feature and the predictions differ, that feature must receive non-zero attribution. Simple gradient methods can violate this.',
+      points: 15,
+      correctAnswer: true,
+      tags: ['axioms', 'sensitivity'],
+    },
+    {
+      id: 'q4',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'How many interpolation steps does WhyteBox use by default for Integrated Gradients?',
+      explanation: 'WhyteBox uses 50 interpolation steps by default. More steps give more accurate approximations of the integral but are slower. 20–300 steps is the typical practical range.',
+      points: 15,
+      options: [
+        { id: 'a', text: '10 steps', isCorrect: false },
+        { id: 'b', text: '25 steps', isCorrect: false },
+        { id: 'c', text: '50 steps', isCorrect: true },
+        { id: 'd', text: '100 steps', isCorrect: false },
+      ],
+      tags: ['implementation', 'whytebox'],
+    },
+    {
+      id: 'q5',
+      type: 'multiple-choice',
+      difficulty: 'medium',
+      question: 'What is the "Implementation Invariance" axiom in Integrated Gradients?',
+      explanation: 'Implementation Invariance states that two functionally equivalent networks (same input-output mapping) must have identical attributions. This is important because it means attributions reflect the model\'s behavior, not its internal implementation details.',
+      points: 15,
+      options: [
+        { id: 'a', text: 'The method works the same regardless of the programming framework used', isCorrect: false },
+        { id: 'b', text: 'Two networks with identical input-output mappings must have identical attributions', isCorrect: true },
+        { id: 'c', text: 'The baseline choice does not affect the final attributions', isCorrect: false },
+        { id: 'd', text: 'The method is invariant to input normalization', isCorrect: false },
+      ],
+      hints: ['Think about what "functionally equivalent" means for two networks'],
+      tags: ['axioms', 'implementation-invariance'],
+    },
+    {
+      id: 'q6',
+      type: 'true-false',
+      difficulty: 'medium',
+      question: 'Guided Backpropagation satisfies both the Sensitivity and Implementation Invariance axioms.',
+      explanation: 'False. Guided Backpropagation violates Implementation Invariance — two functionally equivalent networks can produce different attributions. This is why Integrated Gradients is preferred as a more principled method.',
+      points: 15,
+      correctAnswer: false,
+      tags: ['comparison', 'guided-backprop'],
+    },
+    {
+      id: 'q7',
+      type: 'fill-in-blank',
+      difficulty: 'hard',
+      question: 'The Integrated Gradients formula computes the integral of gradients along a straight ___ from the baseline to the input.',
+      explanation: 'The straight path (or linear interpolation) from baseline x\' to input x is: x\' + α(x - x\') for α ∈ [0, 1]. Gradients are computed at each interpolated point and summed.',
+      points: 20,
+      template: 'The Integrated Gradients formula computes the integral of gradients along a straight ___ from the baseline to the input.',
+      correctAnswers: ['path', 'line', 'interpolation'],
+      caseSensitive: false,
+      tags: ['formula', 'technical'],
+    },
+    {
+      id: 'q8',
+      type: 'multiple-choice',
+      difficulty: 'hard',
+      question: 'Compared to Grad-CAM, what is a key advantage of Integrated Gradients for image classification?',
+      explanation: 'Integrated Gradients produces pixel-level attributions (same resolution as the input), while Grad-CAM produces a coarse heatmap at the resolution of the last convolutional layer. IG also works on any differentiable model, not just CNNs.',
+      points: 20,
+      options: [
+        { id: 'a', text: 'It is faster to compute than Grad-CAM', isCorrect: false },
+        { id: 'b', text: 'It produces full-resolution pixel-level attributions and works on any differentiable model', isCorrect: true },
+        { id: 'c', text: 'It requires no baseline input, making it simpler to use', isCorrect: false },
+        { id: 'd', text: 'It only uses the final layer, making it more interpretable', isCorrect: false },
+      ],
+      hints: [
+        'Think about the resolution of Grad-CAM heatmaps vs IG attributions',
+        'Consider which model types each method supports',
+      ],
+      tags: ['comparison', 'gradcam', 'advanced'],
+    },
+  ],
+  createdAt: new Date('2024-02-10'),
+  updatedAt: new Date('2024-02-10'),
+};
+
+// Made with Bob

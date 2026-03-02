@@ -1,6 +1,6 @@
 /**
  * Main App Component
- * 
+ *
  * Root component with all providers
  */
 
@@ -15,6 +15,10 @@ import { router } from '@/router'
 import { queryClient } from '@/lib/queryClient'
 import { lightTheme, darkTheme } from '@/theme'
 import NotificationManager from '@/components/common/NotificationManager'
+import { QuizProvider } from '@/contexts/QuizContext'
+import { TutorialProvider } from '@/contexts/TutorialContext'
+import { allQuizzes } from '@/data/quizzes'
+import { allTutorials } from '@/data/tutorials'
 
 /**
  * Theme wrapper component
@@ -40,8 +44,12 @@ function App() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <ThemeWrapper>
-          <RouterProvider router={router} />
-          <NotificationManager />
+          <QuizProvider initialQuizzes={allQuizzes}>
+            <TutorialProvider initialTutorials={allTutorials}>
+              <RouterProvider router={router} />
+              <NotificationManager />
+            </TutorialProvider>
+          </QuizProvider>
         </ThemeWrapper>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>

@@ -7,6 +7,7 @@ import type {
   QuestionResult,
   QuizResult
 } from '@/types/quiz';
+import { getQuizById as getQuizByIdFromData } from '@/data/quizzes';
 
 /** In-memory progress state for the active quiz session */
 export interface QuizProgress {
@@ -135,7 +136,8 @@ export const QuizProvider: React.FC<QuizProviderProps> = ({
   }, [isActive, isPaused, timeRemaining]);
 
   const startQuiz = useCallback(async (quizId: string) => {
-    const quiz = quizzes.find(q => q.id === quizId);
+    // Look up from provider-injected list first, then fall back to static data
+    const quiz = quizzes.find(q => q.id === quizId) ?? getQuizByIdFromData(quizId);
     if (!quiz) {
       throw new Error(`Quiz ${quizId} not found`);
     }

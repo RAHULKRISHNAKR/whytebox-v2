@@ -64,7 +64,9 @@ export const TutorialProvider: React.FC<TutorialProviderProps> = ({
     setCurrentStepIndex(0);
     setCurrentStep(tutorial.steps[0] || null);
     setIsActive(true);
-    setShowOverlay(true);
+    // Do NOT set showOverlay here — TutorialViewer is the full-page UI.
+    // The overlay is only used by the legacy overlay-based flow.
+    setShowOverlay(false);
 
     const newProgress: TutorialProgress = {
       tutorialId,
@@ -194,24 +196,16 @@ export const TutorialProvider: React.FC<TutorialProviderProps> = ({
     }
   }, [currentTutorial, currentStep, progress, nextStep]);
 
-  const completeStep = useCallback((stepId: string, data?: any) => {
+  const completeStep = useCallback((stepId: string, _data?: any) => {
     if (!currentTutorial || !progress) return;
 
-    const updatedProgress = {
-      ...progress,
-      completedSteps: [...progress.completedSteps, stepId],
-    };
+    const updatedCompletedSteps = [...progress.completedSteps, stepId];
+    const isNowComplete = updatedCompletedSteps.length >= currentTutorial.steps.length;
 
-    setProgress(updatedProgress);
-    setProgressMap(prev => ({
-      ...prev,
-      [currentTutorial.id]: updatedProgress,
-    }));
-
-    // Check if tutorial is complete
-    if (updatedProgress.completedSteps.length === currentTutorial.steps.length) {
-      const completedProgress = {
-        ...updatedProgress,
+    if (isNowComplete) {
+      const completedProgress: TutorialProgress = {
+        ...progress,
+        completedSteps: updatedCompletedSteps,
         status: 'completed' as TutorialStatus,
         completedAt: new Date(),
       };
@@ -221,9 +215,26 @@ export const TutorialProvider: React.FC<TutorialProviderProps> = ({
         [currentTutorial.id]: completedProgress,
       }));
     } else {
-      nextStep();
+      // Advance to next step inline — avoids stale closure from calling nextStep()
+      const nextIndex = currentStepIndex + 1;
+      const nextStepObj = currentTutorial.steps[nextIndex];
+      const updatedProgress: TutorialProgress = {
+        ...progress,
+        completedSteps: updatedCompletedSteps,
+        currentStepId: nextStepObj.id,
+      };
+      setProgress(updatedProgress);
+      setProgressMap(prev => ({
+        ...prev,
+        [currentTutorial.id]: updatedProgress,
+      }));
+      setCurrentStepIndex(nextIndex);
+      setCurrentStep(nextStepObj);
+      if (nextStepObj.targetElement) {
+        setHighlightedElement(nextStepObj.targetElement);
+      }
     }
-  }, [currentTutorial, progress, nextStep]);
+  }, [currentTutorial, currentStepIndex, progress]);
 
   const validateStepAction = useCallback((action: any): boolean => {
     if (!currentStep?.action?.validator) return true;

@@ -29,7 +29,7 @@ import { QuestionCard, QuizProgress, QuizResults } from '../../components/quiz';
 import { getQuizById } from '../../data/quizzes';
 
 export const QuizTaking: React.FC = () => {
-  const { quizId } = useParams<{ quizId: string }>();
+  const { id: quizId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
     currentQuiz,

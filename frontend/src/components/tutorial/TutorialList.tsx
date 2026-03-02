@@ -30,6 +30,7 @@ import {
   Lock,
   EmojiEvents,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { Tutorial, TutorialFilter } from '../../types/tutorial';
 import { useTutorial } from '../../contexts/TutorialContext';
 
@@ -42,7 +43,8 @@ export const TutorialList: React.FC<TutorialListProps> = ({
   tutorials,
   onStartTutorial,
 }) => {
-  const { startTutorial, getProgress } = useTutorial();
+  const { getProgress } = useTutorial();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<TutorialFilter>({});
 
   // Filter tutorials
@@ -104,7 +106,7 @@ export const TutorialList: React.FC<TutorialListProps> = ({
     if (onStartTutorial) {
       onStartTutorial(tutorialId);
     } else {
-      startTutorial(tutorialId);
+      navigate(`/tutorials/${tutorialId}`);
     }
   };
 
