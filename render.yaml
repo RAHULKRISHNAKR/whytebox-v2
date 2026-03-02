@@ -67,10 +67,12 @@ services:
         value: INFO
       - key: LOG_FORMAT
         value: json
-      # CORS — set to your Vercel frontend URL after deployment
-      # Example: https://whytebox.vercel.app
+      # CORS — set to your actual Vercel frontend URL
+      # Update this after your first Vercel deployment
+      # Multiple origins: comma-separated, no spaces
+      # Note: wildcard subdomains (https://*.vercel.app) are NOT supported by FastAPI CORS
       - key: ALLOWED_ORIGINS
-        sync: false  # Set in dashboard after you know your Vercel URL
+        value: "https://whytebox-v22.vercel.app"
       # ML settings
       - key: PYTORCH_DEVICE
         value: cpu

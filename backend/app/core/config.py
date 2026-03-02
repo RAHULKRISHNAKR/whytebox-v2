@@ -50,8 +50,10 @@ class Settings(BaseSettings):
     # CORS Configuration
     # Stored as a raw string; parsed into a list via the validator below.
     # In .env, use comma-separated values (NOT a JSON array):
-    #   ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8000,https://whytebox-v22.vercel.app,https://*.vercel.app"
+    #   ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,https://myapp.vercel.app
+    # Note: FastAPI CORSMiddleware does NOT support wildcard subdomains like https://*.vercel.app
+    # List each origin explicitly, or set ALLOWED_ORIGINS=* to allow all (dev only).
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8000"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -85,15 +87,19 @@ class Settings(BaseSettings):
         """
         if v is None or (isinstance(v, str) and not v.strip()):
             # Return default when env var is missing or empty
-            return "http://localhost:3000,http://localhost:5173,http://localhost:8000,https://whytebox-v22.vercel.app,https://*.vercel.app"
+            return "http://localhost:3000,http://localhost:5173,http://localhost:8000"
         if isinstance(v, list):
             return ",".join(str(o) for o in v)
         return str(v)
 
     @property
     def cors_origins(self) -> List[str]:
-        """Return ALLOWED_ORIGINS as a list of stripped, non-empty strings."""
-        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        """Return ALLOWED_ORIGINS as a list of stripped, non-empty strings.
+
+        Special value '*' allows all origins (use only in development).
+        """
+        origins = [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        return origins
 
     # File Upload Configuration
     MAX_UPLOAD_SIZE: int = 524288000  # 500MB in bytes
