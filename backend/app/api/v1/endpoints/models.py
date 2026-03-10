@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-from ....services.model_service import PRETRAINED_MODELS, ArchitectureExtractor, model_registry
-from ....services.static_architectures import get_static_architecture, get_static_layers
+from app.services.model_service import PRETRAINED_MODELS, ArchitectureExtractor, model_registry
+from app.services.static_architectures import get_static_architecture, get_static_layers
 
 logger = logging.getLogger(__name__)
 

@@ -31,8 +31,8 @@ import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from PIL import Image
 
-from ....services.model_service import PRETRAINED_MODELS, model_registry
-from ....utils.preprocessing import ImagePreprocessor, NormalizationMethod
+from app.services.model_service import PRETRAINED_MODELS, model_registry
+from app.utils.preprocessing import ImagePreprocessor, NormalizationMethod
 
 logger = logging.getLogger(__name__)
 

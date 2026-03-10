@@ -29,6 +29,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Menu as MenuIcon,
   ViewInAr,
+  Hub as TransformerIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -46,6 +47,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   { title: 'Models', path: '/models', icon: <ModelsIcon /> },
+  { title: 'Transformer', path: '/transformer', icon: <TransformerIcon /> },
   { title: 'Inference', path: '/inference', icon: <InferenceIcon /> },
   { title: 'Explainability', path: '/explainability', icon: <ExplainabilityIcon /> },
   { title: 'Settings', path: '/settings', icon: <SettingsIcon /> },

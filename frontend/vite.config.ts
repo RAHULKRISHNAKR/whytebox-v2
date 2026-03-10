@@ -54,12 +54,12 @@ export default defineConfig(({ mode }) => {
         // causing ECONNREFUSED ::1. Explicit 127.0.0.1 forces IPv4.
         // VITE_BACKEND_PORT can override the port (default 8000).
         '/api': {
-          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '8000'}`,
+          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '5001'}`,
           changeOrigin: true,
           secure: false,
         },
         '/ws': {
-          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '8000'}`,
+          target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '5001'}`,
           changeOrigin: true,
           ws: true,
         },

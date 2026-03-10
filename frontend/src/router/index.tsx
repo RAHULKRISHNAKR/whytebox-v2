@@ -29,6 +29,11 @@ const Explainability = lazy(() => import('@/pages/explainability/Explainability'
 const VisualizationPage = lazy(() => import('@/pages/VisualizationPage'))
 const Visualization = lazy(() => import('@/pages/visualization/Visualization'))
 
+// Transformer Visualizer — interactive step-by-step transformer encoder viz
+const TransformerVisualizerPage = lazy(() =>
+  import('@/visualizations/transformer').then((m) => ({ default: m.TransformerVisualizer }))
+)
+
 // Educational — named exports need .then() wrapping for React.lazy
 const TutorialsPage = lazy(() => import('@/pages/TutorialsPage'))
 const Tutorials = lazy(() =>
@@ -111,6 +116,11 @@ export const router = createBrowserRouter([
         // /visualization/resnet50  (legacy / deep-link)
         path: 'visualization/:id',
         element: <LazyRoute><Visualization /></LazyRoute>,
+      },
+      {
+        // /transformer — interactive transformer visualizer
+        path: 'transformer',
+        element: <LazyRoute><TransformerVisualizerPage /></LazyRoute>,
       },
 
       // ── Educational ───────────────────────────────────────────────────────────

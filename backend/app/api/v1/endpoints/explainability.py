@@ -16,10 +16,10 @@ import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from PIL import Image
 
-from ....services.model_service import PRETRAINED_MODELS, model_registry
-from ....services.static_architectures import get_static_layers
-from ....utils.preprocessing import ImagePreprocessor, NormalizationMethod
-from ....utils.visualization import ExplainabilityVisualizer
+from app.services.model_service import PRETRAINED_MODELS, model_registry
+from app.services.static_architectures import get_static_layers
+from app.utils.preprocessing import ImagePreprocessor, NormalizationMethod
+from app.utils.visualization import ExplainabilityVisualizer
 
 # When DEMO_MODE=true the /compare endpoint returns a structured placeholder
 # response without loading model weights — safe for free-tier hosting.

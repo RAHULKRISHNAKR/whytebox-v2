@@ -43,8 +43,9 @@ cp .env.example .env.local
 Edit `.env.local`:
 ```bash
 # Simplified for local development
+# Port 5001: macOS AirPlay Receiver occupies 5000
 HOST=127.0.0.1
-PORT=8000
+PORT=5001
 DEBUG=true
 ENVIRONMENT=development
 
@@ -89,15 +90,15 @@ The config needs to support SQLite for local development. Let me create an updat
 cd whytebox-v2/backend
 source venv/bin/activate
 
-# Run with environment file
-ENV_FILE=.env.local uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# Run with environment file (port 5001 - macOS AirPlay occupies 5000)
+ENV_FILE=.env.local uvicorn app.main:app --reload --host 127.0.0.1 --port 5001
 ```
 
 ### 6. Test the API
 
 ```bash
 # In another terminal
-curl http://localhost:8000/health
+curl http://localhost:5001/health
 
 # Expected response:
 # {"status":"healthy","version":"2.0.0","environment":"development"}
@@ -113,8 +114,8 @@ ENV_FILE=.env.local uvicorn app.main:app --reload
 ```
 
 ### Access API Documentation
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:5001/docs
+- ReDoc: http://localhost:5001/redoc
 
 ### Run Tests
 ```bash
@@ -135,16 +136,18 @@ mypy .
 
 ```
 ┌─────────────────────────────────────┐
-│   Browser (http://localhost:8000)   │
+│   Browser (http://localhost:5001)   │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│   FastAPI Backend (Port 8000)       │
+│   FastAPI Backend (Port 5001)       │
 │   • In-memory caching                │
 │   • SQLite database                  │
 │   • File-based model storage         │
 └─────────────────────────────────────┘
 ```
+
+**Note**: Port 5001 is used because macOS AirPlay Receiver occupies port 5000.
 
 ## Adding Full Database Support (Optional)
 
@@ -173,8 +176,8 @@ REDIS_URL=redis://localhost:6379/0
 
 ### Port Already in Use
 ```bash
-# Find process using port 8000
-lsof -i :8000
+# Find process using port 5001
+lsof -i :5001
 
 # Kill the process
 kill -9 <PID>
@@ -200,7 +203,7 @@ rm whytebox_local.db
 ## Next Steps
 
 Once the backend is running:
-1. Test API endpoints at http://localhost:8000/docs
+1. Test API endpoints at http://localhost:5001/docs
 2. Implement frontend (Day 5)
 3. Add more API endpoints as needed
 
