@@ -187,59 +187,6 @@ class ModelRegistry:
 
     def list_pretrained(self) -> List[Dict[str, Any]]:
         """List all available pretrained models."""
-        return list(PRETRAINED_MODELS.values())
-
-    def load_pretrained(self, model_id: str) -> Tuple[Any, Dict[str, Any]]:
-        """
-        Load a pretrained torchvision model (lazy loading via cache).
-
-        Model weights are only downloaded and loaded when this method is called.
-        Subsequent calls return the cached model instantly.
-
-        Returns:
-            (model, metadata) tuple
-        """
-        # Check cache first (lazy loading - only load if not cached)
-        if model_id in self._cache:
-            logger.debug(f"Cache hit for model: {model_id}")
-            return self._cache[model_id]["model"], self._cache[model_id]["metadata"]
-
-        if model_id not in PRETRAINED_MODELS:
-            raise ValueError(f"Unknown pretrained model: {model_id}")
-
-        info = PRETRAINED_MODELS[model_id]
-        logger.info(f"Loading pretrained model weights: {model_id}")
-
-        try:
-            import torch
-            import torchvision.models as tv_models
-
-            # Map model_id to torchvision loader
-            loaders = {
-                "vgg16": lambda: tv_models.vgg16(weights=tv_models.VGG16_Weights.IMAGENET1K_V1),
-                "resnet50": lambda: tv_models.resnet50(
-                    weights=tv_models.ResNet50_Weights.IMAGENET1K_V2
-                ),
-                "mobilenet_v2": lambda: tv_models.mobilenet_v2(
-                    weights=tv_models.MobileNet_V2_Weights.IMAGENET1K_V2
-                ),
-                "efficientnet_b0": lambda: tv_models.efficientnet_b0(
-                    weights=tv_models.EfficientNet_B0_Weights.IMAGENET1K_V1
-                ),
-                "alexnet": lambda: tv_models.alexnet(
-                    weights=tv_models.AlexNet_Weights.IMAGENET1K_V1
-                ),
-            }
-
-            if model_id not in loaders:
-                raise ValueError(f"No loader for model: {model_id}")
-
-            model = loaders[model_id]()
-            model.eval()
-
-            metadata = {
-                **info,
-                "loaded_at": time.time(),
                 "device": "cpu",
             }
 
@@ -257,32 +204,9 @@ class ModelRegistry:
 
     def _evict_if_needed(self):
         """Evict oldest cached model if at capacity."""
-        import gc
-
         while len(self._cache) >= self._max_cached and self._load_order:
             oldest = self._load_order.pop(0)
             if oldest in self._cache:
-                model = self._cache[oldest].get("model")
-
-                # Explicitly free GPU memory if model is on GPU
-                if model is not None:
-                    try:
-                        import torch
-
-                        if hasattr(model, "cpu"):
-                            model.cpu()
-                        del model
-
-                        # Force garbage collection
-                        gc.collect()
-
-                        # Clear CUDA cache if available
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-                            logger.debug(f"Cleared GPU memory for model: {oldest}")
-                    except Exception as e:
-                        logger.warning(f"Error clearing GPU memory: {e}")
-
                 del self._cache[oldest]
                 logger.info(f"Evicted model from cache: {oldest}")
 

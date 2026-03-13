@@ -11,48 +11,97 @@
  *   Right panel   — contextual info (embeddings, attention, FFN, etc.)
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import PageContainer from '@/components/common/PageContainer';
 import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  Stack,
-  Chip,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Slider,
-} from '@mui/material'
-import {
-  ExpandMore as ExpandMoreIcon,
-  Layers as LayersIcon,
   Psychology as BrainIcon,
   Settings as ConfigIcon,
-} from '@mui/icons-material'
-import PageContainer from '@/components/common/PageContainer'
-import TokenInput from './TokenInput'
-import StageControls from './StageControls'
-import TransformerScene from './TransformerScene'
-import AttentionMatrix from './AttentionMatrix'
-import TokenEmbeddingView from './TokenEmbeddingView'
-import PositionalEncodingView from './PositionalEncodingView'
-import FeedForwardView from './FeedForwardView'
-import ResidualConnectionView from './ResidualConnectionView'
-import { runTransformer } from '../engine/TransformerEngine'
-import { TransformerStage } from '../types'
-import type { TransformerState, TransformerConfig, AttentionVizMode } from '../types'
-import { DEFAULT_CONFIG } from '../constants'
+  ExpandMore as ExpandMoreIcon,
+  Layers as LayersIcon,
+  AccountTree as ModelIcon,
+} from '@mui/icons-material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Chip,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Slider,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useCallback, useMemo, useState } from 'react';
+import { DEFAULT_CONFIG, MODEL_CONFIGS, MODEL_LABELS, type ModelPreset } from '../constants';
+import { runTransformer } from '../engine/TransformerEngine';
+import type { AttentionVizMode, TransformerConfig, TransformerState } from '../types';
+import { TransformerStage } from '../types';
+import AttentionMatrix from './AttentionMatrix';
+import FeedForwardView from './FeedForwardView';
+import PositionalEncodingView from './PositionalEncodingView';
+import ResidualConnectionView from './ResidualConnectionView';
+import StageControls from './StageControls';
+import TokenEmbeddingView from './TokenEmbeddingView';
+import TokenInput from './TokenInput';
+import TransformerScene from './TransformerScene';
+
+// ─── Model Selector ───────────────────────────────────────────────────────────
+
+interface ModelSelectorProps {
+  selectedModel: ModelPreset;
+  onModelChange: (model: ModelPreset) => void;
+}
+
+function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Stack spacing={1.5}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <ModelIcon fontSize="small" color="primary" />
+          <Typography variant="subtitle2">Model Preset</Typography>
+        </Stack>
+        <FormControl fullWidth size="small">
+          <InputLabel id="model-preset-label">Architecture</InputLabel>
+          <Select
+            labelId="model-preset-label"
+            value={selectedModel}
+            label="Architecture"
+            onChange={(e) => onModelChange(e.target.value as ModelPreset)}
+          >
+            <MenuItem value="custom">{MODEL_LABELS.custom}</MenuItem>
+            <MenuItem value="bert_base">{MODEL_LABELS.bert_base}</MenuItem>
+            <MenuItem value="gpt2">{MODEL_LABELS.gpt2}</MenuItem>
+          </Select>
+        </FormControl>
+        {selectedModel !== 'custom' && (
+          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            Using {MODEL_LABELS[selectedModel]} configuration
+          </Typography>
+        )}
+      </Stack>
+    </Paper>
+  );
+}
 
 // ─── Config panel ─────────────────────────────────────────────────────────────
 
 interface ConfigPanelProps {
-  config: TransformerConfig
-  onConfigChange: (config: TransformerConfig) => void
+  config: TransformerConfig;
+  onConfigChange: (config: TransformerConfig) => void;
+  disabled?: boolean;
+  lockedToModel?: string;
 }
 
-function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
+function ConfigPanel({
+  config,
+  onConfigChange,
+  disabled = false,
+  lockedToModel,
+}: ConfigPanelProps) {
   return (
     <Accordion>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -61,8 +110,19 @@ function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
           <Typography variant="subtitle2">Configuration</Typography>
         </Stack>
       </AccordionSummary>
-      <AccordionDetails>
+      <AccordionDetails
+        sx={{
+          bgcolor: disabled ? 'action.disabledBackground' : 'transparent',
+          opacity: disabled ? 0.7 : 1,
+          transition: 'all 0.2s ease',
+        }}
+      >
         <Stack spacing={2}>
+          {disabled && lockedToModel && (
+            <Typography variant="caption" color="warning.main" sx={{ fontWeight: 500 }}>
+              🔒 Locked to {lockedToModel} preset. Select "Custom" to adjust parameters.
+            </Typography>
+          )}
           <Box>
             <Typography variant="caption" color="text.secondary">
               Model Dimension (d_model): {config.dModel}
@@ -73,9 +133,8 @@ function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
               max={128}
               step={16}
               size="small"
-              onChange={(_, v) =>
-                onConfigChange({ ...config, dModel: v as number })
-              }
+              disabled={disabled}
+              onChange={(_, v) => onConfigChange({ ...config, dModel: v as number })}
             />
           </Box>
           <Box>
@@ -89,9 +148,8 @@ function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
               step={1}
               size="small"
               marks
-              onChange={(_, v) =>
-                onConfigChange({ ...config, numHeads: v as number })
-              }
+              disabled={disabled}
+              onChange={(_, v) => onConfigChange({ ...config, numHeads: v as number })}
             />
           </Box>
           <Box>
@@ -104,9 +162,8 @@ function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
               max={512}
               step={32}
               size="small"
-              onChange={(_, v) =>
-                onConfigChange({ ...config, dFF: v as number })
-              }
+              disabled={disabled}
+              onChange={(_, v) => onConfigChange({ ...config, dFF: v as number })}
             />
           </Box>
           <Box>
@@ -120,15 +177,14 @@ function ConfigPanel({ config, onConfigChange }: ConfigPanelProps) {
               step={1}
               size="small"
               marks
-              onChange={(_, v) =>
-                onConfigChange({ ...config, numLayers: v as number })
-              }
+              disabled={disabled}
+              onChange={(_, v) => onConfigChange({ ...config, numLayers: v as number })}
             />
           </Box>
         </Stack>
       </AccordionDetails>
     </Accordion>
-  )
+  );
 }
 
 // ─── Architecture legend ──────────────────────────────────────────────────────
@@ -144,7 +200,7 @@ const LEGEND_ITEMS = [
   { color: '#E67E22', label: 'Feed-Forward' },
   { color: '#BD10E0', label: 'Layer Norm' },
   { color: '#1ABC9C', label: 'Residual Skip' },
-]
+];
 
 function TransformerLegend() {
   return (
@@ -174,54 +230,64 @@ function TransformerLegend() {
         </Stack>
       </AccordionDetails>
     </Accordion>
-  )
+  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TransformerVisualizer() {
   // State
-  const [config, setConfig] = useState<TransformerConfig>({ ...DEFAULT_CONFIG })
-  const [transformerState, setTransformerState] = useState<TransformerState | null>(null)
-  const [currentStage, setCurrentStage] = useState<TransformerStage>(TransformerStage.INPUT)
-  const [selectedLayer, setSelectedLayer] = useState(0)
-  const [selectedHead, setSelectedHead] = useState(0)
-  const [attentionMode, setAttentionMode] = useState<AttentionVizMode>('heatmap')
+  const [selectedModel, setSelectedModel] = useState<ModelPreset>('custom');
+  const [config, setConfig] = useState<TransformerConfig>({ ...DEFAULT_CONFIG });
+  const [transformerState, setTransformerState] = useState<TransformerState | null>(null);
+  const [currentStage, setCurrentStage] = useState<TransformerStage>(TransformerStage.INPUT);
+  const [selectedLayer, setSelectedLayer] = useState(0);
+  const [selectedHead, setSelectedHead] = useState(0);
+  const [attentionMode, setAttentionMode] = useState<AttentionVizMode>('heatmap');
+
+  // ── Handle model preset change ──────────────────────────────────────────
+  const handleModelChange = useCallback((model: ModelPreset) => {
+    setSelectedModel(model);
+    setConfig({ ...MODEL_CONFIGS[model] });
+    // Reset transformer state to force re-computation with new config
+    setTransformerState(null);
+    setCurrentStage(TransformerStage.INPUT);
+  }, []);
 
   // ── Handle text input ───────────────────────────────────────────────────
   const handleTextChange = useCallback(
     (text: string) => {
       if (!text.trim()) {
-        setTransformerState(null)
-        setCurrentStage(TransformerStage.INPUT)
-        return
+        setTransformerState(null);
+        setCurrentStage(TransformerStage.INPUT);
+        return;
       }
-      const state = runTransformer(text, config)
-      setTransformerState(state)
+      const state = runTransformer(text, config);
+      setTransformerState(state);
       // Auto-advance to tokenization
       if (currentStage === TransformerStage.INPUT) {
-        setCurrentStage(TransformerStage.TOKENIZATION)
+        setCurrentStage(TransformerStage.TOKENIZATION);
       }
     },
-    [config, currentStage],
-  )
+    [config, currentStage]
+  );
 
   // ── Memoized data for current view ──────────────────────────────────────
   const currentLayerData = useMemo(() => {
-    if (!transformerState || transformerState.layers.length === 0) return null
-    return transformerState.layers[selectedLayer] ?? null
-  }, [transformerState, selectedLayer])
+    if (!transformerState || transformerState.layers.length === 0) return null;
+    return transformerState.layers[selectedLayer] ?? null;
+  }, [transformerState, selectedLayer]);
 
   const currentAttentionWeights = useMemo(() => {
-    if (!currentLayerData) return []
-    const head = currentLayerData.selfAttention.heads[selectedHead]
-    return head?.weights ?? []
-  }, [currentLayerData, selectedHead])
+    if (!currentLayerData) return [];
+    const head = currentLayerData.selfAttention.heads[selectedHead];
+    return head?.weights ?? [];
+  }, [currentLayerData, selectedHead]);
 
   const tokenLabels = useMemo(
     () => transformerState?.tokens.map((t) => t.text) ?? [],
-    [transformerState],
-  )
+    [transformerState]
+  );
 
   // ── Right panel content based on current stage ──────────────────────────
   const renderContextPanel = () => {
@@ -233,7 +299,7 @@ export default function TransformerVisualizer() {
             Enter text to begin visualizing the transformer pipeline
           </Typography>
         </Paper>
-      )
+      );
     }
 
     return (
@@ -295,15 +361,15 @@ export default function TransformerVisualizer() {
               Transformer Complete
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {transformerState.tokens.length} tokens processed through{' '}
-              {config.numLayers} encoder layer{config.numLayers > 1 ? 's' : ''},{' '}
-              each with {config.numHeads}-head attention and FFN ({config.dModel}→{config.dFF}→{config.dModel}).
+              {transformerState.tokens.length} tokens processed through {config.numLayers} encoder
+              layer{config.numLayers > 1 ? 's' : ''}, each with {config.numHeads}-head attention and
+              FFN ({config.dModel}→{config.dFF}→{config.dModel}).
             </Typography>
           </Paper>
         )}
       </Stack>
-    )
-  }
+    );
+  };
 
   return (
     <PageContainer
@@ -314,6 +380,9 @@ export default function TransformerVisualizer() {
         {/* ── Left Sidebar ─────────────────────────────────────────────────── */}
         <Grid item xs={12} md={3}>
           <Stack spacing={2}>
+            {/* Model Preset Selector */}
+            <ModelSelector selectedModel={selectedModel} onModelChange={handleModelChange} />
+
             <TokenInput onTextChange={handleTextChange} />
 
             <StageControls
@@ -324,7 +393,12 @@ export default function TransformerVisualizer() {
               onLayerChange={setSelectedLayer}
             />
 
-            <ConfigPanel config={config} onConfigChange={setConfig} />
+            <ConfigPanel
+              config={config}
+              onConfigChange={setConfig}
+              disabled={selectedModel !== 'custom'}
+              lockedToModel={selectedModel !== 'custom' ? MODEL_LABELS[selectedModel] : undefined}
+            />
 
             <TransformerLegend />
 
@@ -337,21 +411,9 @@ export default function TransformerVisualizer() {
                     size="small"
                     color="primary"
                   />
-                  <Chip
-                    label={`${config.numLayers} layers`}
-                    size="small"
-                    color="secondary"
-                  />
-                  <Chip
-                    label={`${config.numHeads} heads`}
-                    size="small"
-                    color="info"
-                  />
-                  <Chip
-                    label={`d=${config.dModel}`}
-                    size="small"
-                    color="success"
-                  />
+                  <Chip label={`${config.numLayers} layers`} size="small" color="secondary" />
+                  <Chip label={`${config.numHeads} heads`} size="small" color="info" />
+                  <Chip label={`d=${config.dModel}`} size="small" color="success" />
                 </Stack>
               </Paper>
             )}
@@ -379,5 +441,7 @@ export default function TransformerVisualizer() {
         </Grid>
       </Grid>
     </PageContainer>
-  )
+  );
 }
+
+// Made with Bob

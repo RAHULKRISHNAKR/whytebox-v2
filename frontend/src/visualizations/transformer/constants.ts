@@ -30,7 +30,7 @@ export const COLORS = {
   gridLine: 'rgba(255, 255, 255, 0.1)',
   text: '#FFFFFF',
   textSecondary: '#B0BEC5',
-} as const
+} as const;
 
 // ─── Viridis colormap stops ─────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ export const VIRIDIS_STOPS = [
   { pos: 0.5, r: 33, g: 145, b: 140 },
   { pos: 0.75, r: 94, g: 201, b: 98 },
   { pos: 1.0, r: 253, g: 231, b: 37 },
-] as const
+] as const;
 
 // ─── 3D Scene layout ────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ export const LAYOUT = {
   arcMaxHeight: 2.0,
   arcSegments: 15,
   residualCurveSegments: 20,
-} as const
+} as const;
 
 // ─── Default transformer config (educational size) ──────────────────────────
 
@@ -65,16 +65,46 @@ export const DEFAULT_CONFIG = {
   numLayers: 2,
   vocabSize: 1000,
   maxSeqLen: 32,
-} as const
+} as const;
+
+// ─── Model-specific configurations ──────────────────────────────────────────
+
+export const MODEL_CONFIGS = {
+  custom: DEFAULT_CONFIG,
+  bert_base: {
+    dModel: 768,
+    numHeads: 12,
+    dFF: 3072,
+    numLayers: 12,
+    vocabSize: 30522,
+    maxSeqLen: 512,
+  },
+  gpt2: {
+    dModel: 768,
+    numHeads: 12,
+    dFF: 3072,
+    numLayers: 12,
+    vocabSize: 50257,
+    maxSeqLen: 1024,
+  },
+} as const;
+
+export type ModelPreset = keyof typeof MODEL_CONFIGS;
+
+export const MODEL_LABELS: Record<ModelPreset, string> = {
+  custom: 'Custom Configuration',
+  bert_base: 'BERT-base (12L, 768d, 12H)',
+  gpt2: 'GPT-2 (12L, 768d, 12H)',
+} as const;
 
 // ─── Animation ──────────────────────────────────────────────────────────────
 
 export const ANIMATION = {
   defaultSpeed: 1.0,
-  expandDuration: 300,   // ms
+  expandDuration: 300, // ms
   collapseDuration: 200, // ms
   flowSpeed: 0.02,
-} as const
+} as const;
 
 // ─── Rendering limits ───────────────────────────────────────────────────────
 
@@ -83,4 +113,4 @@ export const LIMITS = {
   maxVisibleHeads: 8,
   textureSize: 256,
   attentionThreshold: 0.1,
-} as const
+} as const;

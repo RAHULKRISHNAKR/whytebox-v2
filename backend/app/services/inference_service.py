@@ -5,6 +5,7 @@ Provides a unified interface for running inference across different frameworks
 with preprocessing, postprocessing, and caching support.
 """
 
+import asyncio
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -98,7 +99,7 @@ class InferenceService:
         cache_key: Optional[str] = None,
     ) -> InferenceResult:
         """
-        Run inference on input data.
+        Run inference on input data asynchronously.
 
         Args:
             model_path: Path to model file
@@ -113,17 +114,23 @@ class InferenceService:
         Returns:
             InferenceResult object
         """
-        # Load model
+        # Load model (synchronous, but fast with caching)
         engine = self.load_model(model_path, framework, device, class_names, cache_key)
 
-        # Preprocess input
+        # Preprocess input (synchronous, but fast)
         if preprocessing_config:
             input_data = self._preprocess_input(input_data, preprocessing_config)
 
-        # Run inference
-        result = engine.predict(input_data)
+        # Run inference asynchronously in thread pool to avoid blocking event loop
+        # This is the CPU-intensive operation that needs to be non-blocking
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,  # Use default ThreadPoolExecutor
+            engine.predict,
+            input_data
+        )
 
-        # Postprocess output
+        # Postprocess output (synchronous, but fast)
         if postprocessing_config:
             result = self._postprocess_output(result, postprocessing_config)
 
@@ -142,7 +149,7 @@ class InferenceService:
         cache_key: Optional[str] = None,
     ) -> List[InferenceResult]:
         """
-        Run batch inference on multiple inputs.
+        Run batch inference on multiple inputs asynchronously.
 
         Args:
             model_path: Path to model file
@@ -158,17 +165,23 @@ class InferenceService:
         Returns:
             List of InferenceResult objects
         """
-        # Load model
+        # Load model (synchronous, but fast with caching)
         engine = self.load_model(model_path, framework, device, class_names, cache_key)
 
-        # Preprocess inputs
+        # Preprocess inputs (synchronous, but fast)
         if preprocessing_config:
             input_batch = [self._preprocess_input(inp, preprocessing_config) for inp in input_batch]
 
-        # Run batch inference
-        results = engine.predict_batch(input_batch, batch_size)
+        # Run batch inference asynchronously in thread pool
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None,  # Use default ThreadPoolExecutor
+            engine.predict_batch,
+            input_batch,
+            batch_size
+        )
 
-        # Postprocess outputs
+        # Postprocess outputs (synchronous, but fast)
         if postprocessing_config:
             results = [
                 self._postprocess_output(result, postprocessing_config) for result in results

@@ -404,8 +404,12 @@ async def upload_model(
         content = await file.read()
         with open(save_path, "wb") as f:
             f.write(content)
+    except (OSError, IOError) as e:
+        logger.error(f"Failed to save uploaded model file {save_path}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save uploaded model file")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+        logger.error(f"Unexpected error during model upload: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during upload")
 
     file_size_mb = round(len(content) / 1024 / 1024, 2)
 

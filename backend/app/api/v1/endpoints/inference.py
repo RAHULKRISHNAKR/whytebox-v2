@@ -63,27 +63,6 @@ def _load_model_by_id(model_id: str):
     raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
 
 
-def _preprocess_image(
-    image_array: np.ndarray,
-    target_size: tuple = (224, 224),
-    normalization: str = "imagenet",
-) -> np.ndarray:
-    """Preprocess image for model inference."""
-    norm_method = (
-        NormalizationMethod.IMAGENET
-        if normalization == "imagenet"
-        else NormalizationMethod.ZERO_ONE
-    )
-
-    processed = ImagePreprocessor.preprocess_for_model(
-        image_array,
-        target_size=target_size,
-        normalization=norm_method,
-        channel_first=True,
-    )
-    return processed
-
-
 def _run_pytorch_inference(
     model: Any,
     input_array: np.ndarray,
@@ -176,7 +155,17 @@ async def predict(
         h, w = map(int, target_size.split(","))
 
         # Preprocess
-        processed = _preprocess_image(image_array, (h, w), normalization)
+        norm_method = (
+            NormalizationMethod.IMAGENET
+            if normalization == "imagenet"
+            else NormalizationMethod.ZERO_ONE
+        )
+        processed = ImagePreprocessor.preprocess_for_model(
+            image_array,
+            target_size=(h, w),
+            normalization=norm_method,
+            channel_first=True,
+        )
 
         # Load model
         model, metadata, framework = _load_model_by_id(model_id)
@@ -215,11 +204,9 @@ async def predict(
 
     except HTTPException:
         raise
-    except ImportError as e:
-        raise HTTPException(status_code=503, detail=f"PyTorch not installed: {e}")
     except Exception as e:
         logger.error(f"Inference failed for {model_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Inference request failed")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +234,17 @@ async def predict_batch(
             image_data = await img_file.read()
             pil_image = Image.open(BytesIO(image_data)).convert("RGB")
             image_array = np.array(pil_image)
-            processed = _preprocess_image(image_array, (h, w), normalization)
+            norm_method = (
+                NormalizationMethod.IMAGENET
+                if normalization == "imagenet"
+                else NormalizationMethod.ZERO_ONE
+            )
+            processed = ImagePreprocessor.preprocess_for_model(
+                image_array,
+                target_size=(h, w),
+                normalization=norm_method,
+                channel_first=True,
+            )
 
             if framework == "pytorch":
                 result = _run_pytorch_inference(model, processed, top_k)
@@ -300,7 +297,17 @@ async def get_activations(
         image_array = np.array(pil_image)
 
         h, w = map(int, target_size.split(","))
-        processed = _preprocess_image(image_array, (h, w), normalization)
+        norm_method = (
+            NormalizationMethod.IMAGENET
+            if normalization == "imagenet"
+            else NormalizationMethod.ZERO_ONE
+        )
+        processed = ImagePreprocessor.preprocess_for_model(
+            image_array,
+            target_size=(h, w),
+            normalization=norm_method,
+            channel_first=True,
+        )
 
         # Load model
         model, metadata, framework = _load_model_by_id(model_id)

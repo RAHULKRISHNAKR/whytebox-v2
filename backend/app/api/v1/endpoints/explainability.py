@@ -56,19 +56,6 @@ def _load_model_by_id(model_id: str):
     raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
 
 
-def _preprocess_image(
-    image_array: np.ndarray,
-    target_size: tuple = (224, 224),
-) -> np.ndarray:
-    """Preprocess image for model (channel-first, ImageNet normalized)."""
-    return ImagePreprocessor.preprocess_for_model(
-        image_array,
-        target_size=target_size,
-        normalization=NormalizationMethod.IMAGENET,
-        channel_first=True,
-    )
-
-
 def _array_to_base64(arr: np.ndarray) -> str:
     """Convert numpy array to base64 PNG string."""
     if arr.dtype != np.uint8:
@@ -136,7 +123,12 @@ async def explain_gradcam(
         original_array = np.array(pil_image)
 
         h, w = map(int, target_size.split(","))
-        processed = _preprocess_image(original_array, (h, w))
+        processed = ImagePreprocessor.preprocess_for_model(
+            original_array,
+            target_size=(h, w),
+            normalization=NormalizationMethod.IMAGENET,
+            channel_first=True,
+        )
 
         # Load model
         model, metadata, framework = _load_model_by_id(model_id)
@@ -257,11 +249,9 @@ async def explain_gradcam(
 
     except HTTPException:
         raise
-    except ImportError as e:
-        raise HTTPException(status_code=503, detail=f"PyTorch not installed: {e}")
     except Exception as e:
         logger.error(f"Grad-CAM failed for {model_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Grad-CAM generation failed")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -294,7 +284,12 @@ async def explain_saliency(
         original_array = np.array(pil_image)
 
         h, w = map(int, target_size.split(","))
-        processed = _preprocess_image(original_array, (h, w))
+        processed = ImagePreprocessor.preprocess_for_model(
+            original_array,
+            target_size=(h, w),
+            normalization=NormalizationMethod.IMAGENET,
+            channel_first=True,
+        )
 
         model, metadata, framework = _load_model_by_id(model_id)
         if framework != "pytorch":
@@ -423,7 +418,12 @@ async def explain_integrated_gradients(
         original_array = np.array(pil_image)
 
         h, w = map(int, target_size.split(","))
-        processed = _preprocess_image(original_array, (h, w))
+        processed = ImagePreprocessor.preprocess_for_model(
+            original_array,
+            target_size=(h, w),
+            normalization=NormalizationMethod.IMAGENET,
+            channel_first=True,
+        )
 
         model, metadata, framework = _load_model_by_id(model_id)
         if framework != "pytorch":
@@ -596,7 +596,12 @@ async def compare_methods(
         original_array = np.array(pil_image)
 
         h, w = map(int, target_size.split(","))
-        processed = _preprocess_image(original_array, (h, w))
+        processed = ImagePreprocessor.preprocess_for_model(
+            original_array,
+            target_size=(h, w),
+            normalization=NormalizationMethod.IMAGENET,
+            channel_first=True,
+        )
 
         # Load model — wrap so any OOM/timeout returns HTTP 503 (not a worker
         # crash that would prevent CORS headers from being sent).
