@@ -8,22 +8,25 @@
 
 ### 🧠 Models Supported
 
-| Model | Type | Parameters |
-|-------|------|-----------|
-| ResNet-50 | CNN — Residual | 25.6M |
-| VGG16 | CNN — Deep | 138M |
-| MobileNetV2 | CNN — Efficient | 3.5M |
-| EfficientNet-B0 | CNN — Compound-scaled | 5.3M |
-| AlexNet | CNN — Historic | 61M |
-| BERT-base | Transformer — NLP | 110M |
-| GPT-2 | Transformer — Generative | 117M |
-| ViT-B/16 | Transformer — Vision | 86M |
+| Model           | Type                     | Parameters |
+| --------------- | ------------------------ | ---------- |
+| ResNet-50       | CNN — Residual           | 25.6M      |
+| VGG16           | CNN — Deep               | 138M       |
+| MobileNetV2     | CNN — Efficient          | 3.5M       |
+| EfficientNet-B0 | CNN — Compound-scaled    | 5.3M       |
+| AlexNet         | CNN — Historic           | 61M        |
+| BERT-base       | Transformer — NLP        | 110M       |
+| GPT-2           | Transformer — Generative | 117M       |
+| ViT-B/16        | Transformer — Vision     | 86M        |
 
 All pretrained models use static architecture data — **no model weights are downloaded** just to view the architecture. Weights are only downloaded when you run inference.
 
 ### 🎯 Core Capabilities
 
 - **3D Architecture Visualization** — Interactive BabylonJS scene with layer-type colour coding and custom mesh shapes (conv = box, dense = sphere, attention head = diamond, feed-forward = hexagonal prism, etc.)
+  - **NEW: Layer Explanation Sidebar** — Click any layer to see plain English explanations of what it does, its parameters, and how it works
+  - **NEW: Data Flow Animation** — Watch signal travel layer-by-layer through the 3D architecture during streaming inference
+  - **NEW: Grad-CAM Layer Contributions** — Layers colored by contribution scores (red=high, orange=medium, blue=low) after running Grad-CAM
 - **Transformer Visualization** — Interactive 3D visualization of transformer architecture with:
   - Token embedding visualization with positional encoding
   - Multi-head attention matrix heatmaps
@@ -32,12 +35,12 @@ All pretrained models use static architecture data — **no model weights are do
   - Step-by-step animation through transformer stages
 - **Live Inference** — Upload an image and run it through any model; see top-5 predictions with confidence scores
 - **Explainability Methods**:
-  - **Grad-CAM** — Gradient-weighted Class Activation Mapping
+  - **Grad-CAM** — Gradient-weighted Class Activation Mapping with layer contribution analysis
   - **Saliency Maps** — Raw gradient magnitude per pixel
   - **Integrated Gradients** — Path-integrated attribution (Sundararajan et al. 2017); more robust than Guided Backprop
 - **Attention Heatmaps** — For transformer models (BERT, GPT-2, ViT), visualize multi-head attention patterns per layer
 - **Educational Content** — Tutorials, quizzes, learning paths, and documentation built in
-- **WebSocket Streaming** — Real-time inference progress updates
+- **WebSocket Streaming** — Real-time inference progress updates with visual layer-by-layer animation
 
 ---
 
@@ -53,6 +56,7 @@ cd whytebox-v2
 Open **http://localhost:5173**
 
 Other modes:
+
 ```bash
 ./start.sh --dev     # hot-reload frontend (Vite :5173) + backend (:5001)
 ./start.sh --build   # rebuild frontend dist then start
@@ -77,11 +81,11 @@ Open **http://localhost:5173**
 
 ### Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Python | 3.10, 3.11, or 3.12 |
-| Node.js | 18 LTS or 20 LTS |
-| Git | Latest |
+| Tool    | Version             |
+| ------- | ------------------- |
+| Python  | 3.10, 3.11, or 3.12 |
+| Node.js | 18 LTS or 20 LTS    |
+| Git     | Latest              |
 
 ### Backend
 
@@ -129,23 +133,23 @@ Open **http://localhost:5173**
 
 ### Backend (`backend/.env`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `HOST` | `0.0.0.0` | Bind host |
-| `PORT` | `5001` | API port (5001 due to macOS AirPlay on 5000) |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./whytebox_local.db` | SQLite (no setup needed) |
-| `REDIS_URL` | *(empty)* | Optional — leave empty to disable caching |
-| `DEBUG` | `true` | Auto-reload on code changes |
-| `SECRET_KEY` | *(required)* | JWT signing key |
-| `ALLOWED_ORIGINS` | `http://localhost:5173,...` | CORS allowed origins |
-| `PYTORCH_DEVICE` | `cpu` | `cpu` or `cuda` |
+| Variable          | Default                                   | Description                                  |
+| ----------------- | ----------------------------------------- | -------------------------------------------- |
+| `HOST`            | `0.0.0.0`                                 | Bind host                                    |
+| `PORT`            | `5001`                                    | API port (5001 due to macOS AirPlay on 5000) |
+| `DATABASE_URL`    | `sqlite+aiosqlite:///./whytebox_local.db` | SQLite (no setup needed)                     |
+| `REDIS_URL`       | _(empty)_                                 | Optional — leave empty to disable caching    |
+| `DEBUG`           | `true`                                    | Auto-reload on code changes                  |
+| `SECRET_KEY`      | _(required)_                              | JWT signing key                              |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,...`               | CORS allowed origins                         |
+| `PYTORCH_DEVICE`  | `cpu`                                     | `cpu` or `cuda`                              |
 
 ### Frontend (`frontend/.env.local`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_BACKEND_PORT` | `5001` | Backend port — used by Vite proxy |
-| `VITE_WS_URL` | `ws://127.0.0.1:5001` | WebSocket URL for streaming inference |
+| Variable            | Default               | Description                           |
+| ------------------- | --------------------- | ------------------------------------- |
+| `VITE_BACKEND_PORT` | `5001`                | Backend port — used by Vite proxy     |
+| `VITE_WS_URL`       | `ws://127.0.0.1:5001` | WebSocket URL for streaming inference |
 
 > **Note**: Do not set `VITE_API_URL` in `.env.local` for local development. The Vite dev server proxies `/api/*` to `127.0.0.1:VITE_BACKEND_PORT` automatically. `VITE_API_URL` is only used in production builds.
 
@@ -156,6 +160,7 @@ Open **http://localhost:5173**
 ### Technology Stack
 
 **Frontend**
+
 - React 18 + TypeScript 5
 - BabylonJS 6 (3D visualization)
 - Material-UI 5 (component library)
@@ -165,6 +170,7 @@ Open **http://localhost:5173**
 - Vitest + Playwright (testing)
 
 **Backend**
+
 - FastAPI 0.115 (Python 3.10+)
 - SQLAlchemy 2.0 + SQLite (local) / PostgreSQL (production)
 - PyTorch 2.10 + torchvision 0.25
@@ -272,31 +278,31 @@ make docker-up    # start with Docker Compose
 
 ## 🌐 API Reference
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/api/v1/models` | GET | List all available models |
-| `/api/v1/models/{id}` | GET | Get model metadata |
-| `/api/v1/models/{id}/architecture` | GET | Get layer architecture (static, instant) |
-| `/api/v1/models/{id}/layers` | GET | Get layer names for Grad-CAM target selection |
-| `/api/v1/inference` | POST | Run inference on an image |
-| `/api/v1/explainability` | POST | Generate Grad-CAM / Saliency / Integrated Gradients |
-| `/api/v1/explainability/compare` | POST | Compare all explainability methods side-by-side |
-| `/api/v1/ws/inference` | WS | Streaming inference with real-time progress |
-| `/docs` | GET | Swagger UI (interactive API docs) |
-| `/redoc` | GET | ReDoc API docs |
+| Endpoint                           | Method | Description                                         |
+| ---------------------------------- | ------ | --------------------------------------------------- |
+| `/health`                          | GET    | Health check                                        |
+| `/api/v1/models`                   | GET    | List all available models                           |
+| `/api/v1/models/{id}`              | GET    | Get model metadata                                  |
+| `/api/v1/models/{id}/architecture` | GET    | Get layer architecture (static, instant)            |
+| `/api/v1/models/{id}/layers`       | GET    | Get layer names for Grad-CAM target selection       |
+| `/api/v1/inference`                | POST   | Run inference on an image                           |
+| `/api/v1/explainability`           | POST   | Generate Grad-CAM / Saliency / Integrated Gradients |
+| `/api/v1/explainability/compare`   | POST   | Compare all explainability methods side-by-side     |
+| `/api/v1/ws/inference`             | WS     | Streaming inference with real-time progress         |
+| `/docs`                            | GET    | Swagger UI (interactive API docs)                   |
+| `/redoc`                           | GET    | ReDoc API docs                                      |
 
 ---
 
 ## 🐛 Common Issues
 
-| Problem | Fix |
-|---------|-----|
-| `ECONNREFUSED ::1:5001` | Use `--host 127.0.0.1` with uvicorn; don't set `VITE_API_URL` in `.env.local` |
-| `500 on /api/v1/models` | Check backend terminal for traceback; ensure venv is activated and imports are correct |
-| Port 5000 in use (macOS) | macOS AirPlay Receiver uses 5000; backend uses 5001 by default |
-| Port 5001 in use | Kill process with `lsof -ti:5001 \| xargs kill -9` or use different port |
-| Redis warnings on startup | Non-fatal — set `REDIS_URL=` (empty) in `backend/.env` to suppress |
+| Problem                             | Fix                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `ECONNREFUSED ::1:5001`             | Use `--host 127.0.0.1` with uvicorn; don't set `VITE_API_URL` in `.env.local`                    |
+| `500 on /api/v1/models`             | Check backend terminal for traceback; ensure venv is activated and imports are correct           |
+| Port 5000 in use (macOS)            | macOS AirPlay Receiver uses 5000; backend uses 5001 by default                                   |
+| Port 5001 in use                    | Kill process with `lsof -ti:5001 \| xargs kill -9` or use different port                         |
+| Redis warnings on startup           | Non-fatal — set `REDIS_URL=` (empty) in `backend/.env` to suppress                               |
 | Vite proxy still hitting wrong port | Ensure `VITE_BACKEND_PORT=5001` in `.env` and delete `frontend/node_modules/.vite`, then restart |
 
 ---
@@ -307,4 +313,29 @@ MIT License — see LICENSE file for details.
 
 ---
 
-*Made with Bob — WhyteBox v2.0 · Last updated: 2026-03-02*
+## 🆕 Recent Updates (March 2026)
+
+### Three New Educational UX Features
+
+1. **Layer Explanation Sidebar** — Click any layer in the 3D visualization to see:
+   - Plain English explanation of what the layer does
+   - Parameter details and configuration
+   - How it fits in the overall architecture
+   - Educational context for beginners
+
+2. **Data Flow Animation** — During streaming inference:
+   - Watch signal travel layer-by-layer through the 3D architecture
+   - Active layer glows blue and scales up
+   - Completed layers fade to show progress
+   - Automatic reset when inference completes
+
+3. **Grad-CAM Layer Contributions** — After running Grad-CAM:
+   - Switch to Visualization page to see layers colored by contribution
+   - Red = high contribution (0.67-1.0)
+   - Orange = medium contribution (0.34-0.66)
+   - Blue = low contribution (0.0-0.33)
+   - Cross-page state management via Zustand store
+
+---
+
+_Made with Bob — WhyteBox v2.0 · Last updated: 2026-03-16_

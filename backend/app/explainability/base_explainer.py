@@ -27,6 +27,7 @@ class ExplainabilityResult:
         method: Explainability method used
         target_layer: Target layer for layer-based methods
         computation_time: Time taken to compute explanation
+        layer_contributions: Per-layer contribution scores (layer_name -> 0.0-1.0)
         metadata: Additional metadata
     """
 
@@ -39,6 +40,7 @@ class ExplainabilityResult:
     method: str = ""
     target_layer: Optional[str] = None
     computation_time: float = 0.0
+    layer_contributions: Optional[Dict[str, float]] = None
     metadata: Dict[str, Any] = None
 
     def __post_init__(self):
@@ -68,6 +70,7 @@ class ExplainabilityResult:
             "method": self.method,
             "target_layer": self.target_layer,
             "computation_time": self.computation_time,
+            "layer_contributions": self.layer_contributions,
             "metadata": self.metadata,
         }
 

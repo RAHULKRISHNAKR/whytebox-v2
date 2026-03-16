@@ -7,47 +7,51 @@
  * Sections:
  *   1. Left sidebar  — model selector, architecture stats, legend, controls
  *   2. Main canvas   — 3D BabylonJS scene (ModelViewer)
- *   3. Feature Maps  — image upload + per-layer activation map grid
+ *   3. Right sidebar — layer explanation (shows on layer click)
+ *   4. Feature Maps  — image upload + per-layer activation map grid
  */
 
-import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import PageContainer from '@/components/common/PageContainer';
+import FeatureMapPanel from '@/components/visualization/FeatureMapPanel';
+import LayerExplanationSidebar from '@/components/visualization/LayerExplanationSidebar';
+import ModelViewer from '@/components/visualization/ModelViewer';
+import { useStreamingInference } from '@/hooks/useStreamingInference';
+import { inferenceApi, type BulkActivationResult } from '@/services/api/inference';
+import { modelsApi } from '@/services/api/models';
+import type { ArchitectureLayer } from '@/types/api';
 import {
+  Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  GridView as FeatureMapIcon,
+  Image as ImageIcon,
+  Refresh as RefreshIcon,
+  CloudUpload as UploadIcon,
+} from '@mui/icons-material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
   Box,
-  Grid,
-  Paper,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Stack,
+  Button,
   Chip,
   CircularProgress,
-  Alert,
   Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Button,
-  LinearProgress,
-  Tooltip,
+  FormControl,
+  Grid,
   IconButton,
-} from '@mui/material'
-import {
-  ExpandMore as ExpandMoreIcon,
-  CloudUpload as UploadIcon,
-  Image as ImageIcon,
-  Close as CloseIcon,
-  Refresh as RefreshIcon,
-  GridView as FeatureMapIcon,
-} from '@mui/icons-material'
-import PageContainer from '@/components/common/PageContainer'
-import ModelViewer from '@/components/visualization/ModelViewer'
-import FeatureMapPanel from '@/components/visualization/FeatureMapPanel'
-import { modelsApi } from '@/services/api/models'
-import { inferenceApi, type BulkActivationResult } from '@/services/api/inference'
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 // ─── Architecture stats panel ─────────────────────────────────────────────────
 function ArchitectureStats({ modelId }: { modelId: string }) {
@@ -56,31 +60,45 @@ function ArchitectureStats({ modelId }: { modelId: string }) {
     queryFn: () => modelsApi.getModelArchitecture(modelId),
     enabled: !!modelId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 
-  if (isLoading) return <CircularProgress size={20} />
-  if (!arch) return null
+  if (isLoading) return <CircularProgress size={20} />;
+  if (!arch) return null;
 
-  const { stats, visualization_hints } = arch
+  const { stats, visualization_hints } = arch;
 
   return (
     <Stack spacing={2}>
       <Stack direction="row" spacing={1} flexWrap="wrap">
         <Chip label={`${stats.total_layers} layers`} size="small" color="primary" />
-        <Chip label={`${(stats.total_params / 1e6).toFixed(1)}M params`} size="small" color="secondary" />
-        <Chip label={`${(stats.trainable_params / 1e6).toFixed(1)}M trainable`} size="small" color="success" />
+        <Chip
+          label={`${(stats.total_params / 1e6).toFixed(1)}M params`}
+          size="small"
+          color="secondary"
+        />
+        <Chip
+          label={`${(stats.trainable_params / 1e6).toFixed(1)}M trainable`}
+          size="small"
+          color="success"
+        />
       </Stack>
 
       <Box>
-        <Typography variant="subtitle2" gutterBottom>Layer Types</Typography>
+        <Typography variant="subtitle2" gutterBottom>
+          Layer Types
+        </Typography>
         <Stack spacing={0.5}>
           {Object.entries(stats.layer_type_counts)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 8)
             .map(([type, count]) => (
               <Stack key={type} direction="row" justifyContent="space-between">
-                <Typography variant="caption" color="text.secondary">{type}</Typography>
-                <Typography variant="caption" fontWeight="bold">{count}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {type}
+                </Typography>
+                <Typography variant="caption" fontWeight="bold">
+                  {count}
+                </Typography>
               </Stack>
             ))}
         </Stack>
@@ -88,11 +106,15 @@ function ArchitectureStats({ modelId }: { modelId: string }) {
 
       {visualization_hints.blocks.length > 0 && (
         <Box>
-          <Typography variant="subtitle2" gutterBottom>Block Structure</Typography>
+          <Typography variant="subtitle2" gutterBottom>
+            Block Structure
+          </Typography>
           <Stack spacing={0.5}>
             {visualization_hints.blocks.map((block, i) => (
               <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" color="text.secondary">{block.category}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {block.category}
+                </Typography>
                 <Chip label={block.count} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
               </Stack>
             ))}
@@ -100,55 +122,72 @@ function ArchitectureStats({ modelId }: { modelId: string }) {
         </Box>
       )}
     </Stack>
-  )
+  );
 }
 
 // ─── Legend ───────────────────────────────────────────────────────────────────
 const LEGEND = [
-  { category: 'conv',           color: '#2E86DE', shape: 'Flat slab',        description: 'Convolutional layer' },
-  { category: 'dense',          color: '#20B2AA', shape: 'Sphere',           description: 'Fully connected layer' },
-  { category: 'activation',     color: '#FFC300', shape: 'Disc',             description: 'Activation function' },
-  { category: 'pooling',        color: '#E74C3C', shape: 'Cube',             description: 'Pooling layer' },
-  { category: 'normalization',  color: '#9B59B6', shape: 'Torus',            description: 'Batch/Layer norm' },
-  { category: 'regularization', color: '#4CAF50', shape: 'Wireframe sphere', description: 'Dropout' },
-  { category: 'reshape',        color: '#FF9800', shape: 'Octahedron',       description: 'Reshape/Flatten' },
-  { category: 'output',         color: '#F44336', shape: 'Cylinder',         description: 'Output layer' },
-]
+  { category: 'conv', color: '#2E86DE', shape: 'Flat slab', description: 'Convolutional layer' },
+  { category: 'dense', color: '#20B2AA', shape: 'Sphere', description: 'Fully connected layer' },
+  { category: 'activation', color: '#FFC300', shape: 'Disc', description: 'Activation function' },
+  { category: 'pooling', color: '#E74C3C', shape: 'Cube', description: 'Pooling layer' },
+  { category: 'normalization', color: '#9B59B6', shape: 'Torus', description: 'Batch/Layer norm' },
+  {
+    category: 'regularization',
+    color: '#4CAF50',
+    shape: 'Wireframe sphere',
+    description: 'Dropout',
+  },
+  { category: 'reshape', color: '#FF9800', shape: 'Octahedron', description: 'Reshape/Flatten' },
+  { category: 'output', color: '#F44336', shape: 'Cylinder', description: 'Output layer' },
+];
 
 function VisualizationLegend() {
   return (
     <Stack spacing={0.75}>
       {LEGEND.map((item) => (
         <Stack key={item.category} direction="row" spacing={1.5} alignItems="center">
-          <Box sx={{ width: 14, height: 14, borderRadius: '2px', backgroundColor: item.color, flexShrink: 0 }} />
+          <Box
+            sx={{
+              width: 14,
+              height: 14,
+              borderRadius: '2px',
+              backgroundColor: item.color,
+              flexShrink: 0,
+            }}
+          />
           <Box>
-            <Typography variant="caption" fontWeight="medium">{item.description}</Typography>
-            <Typography variant="caption" color="text.secondary" display="block">{item.shape}</Typography>
+            <Typography variant="caption" fontWeight="medium">
+              {item.description}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              {item.shape}
+            </Typography>
           </Box>
         </Stack>
       ))}
     </Stack>
-  )
+  );
 }
 
 // ─── Feature Maps Section ─────────────────────────────────────────────────────
 
 interface FeatureMapsProps {
-  modelId: string
+  modelId: string;
   /** Called after a successful bulk extraction so the 3D viewer can show real activations */
-  onActivationsExtracted?: (data: Record<string, number[][]>) => void
+  onActivationsExtracted?: (data: Record<string, number[][]>) => void;
 }
 
 function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const [bulkResults, setBulkResults] = useState<Record<string, BulkActivationResult> | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
-  const [selectedChannel, setSelectedChannel] = useState<number | undefined>(undefined)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [bulkResults, setBulkResults] = useState<Record<string, BulkActivationResult> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<number | undefined>(undefined);
 
   // Fetch conv layer names
   const { data: layerInfo } = useQuery({
@@ -156,90 +195,87 @@ function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProp
     queryFn: () => modelsApi.getModelLayers(modelId),
     enabled: !!modelId,
     staleTime: 10 * 60 * 1000,
-  })
+  });
 
-  const convLayers = layerInfo?.conv_layers ?? []
+  const convLayers = layerInfo?.conv_layers ?? [];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageFile(file)
-    const url = URL.createObjectURL(file)
-    setImagePreviewUrl(url)
-    setBulkResults(null)
-    setSelectedLayer(null)
-    setError(null)
-  }
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImagePreviewUrl(url);
+    setBulkResults(null);
+    setSelectedLayer(null);
+    setError(null);
+  };
 
   const handleExtract = async () => {
-    if (!imageFile || convLayers.length === 0) return
-    setLoading(true)
-    setProgress(0)
-    setError(null)
-    setBulkResults(null)
+    if (!imageFile || convLayers.length === 0) return;
+    setLoading(true);
+    setProgress(0);
+    setError(null);
+    setBulkResults(null);
 
     try {
       // Extract in batches of 4, updating progress
-      const BATCH = 4
-      const results: Record<string, BulkActivationResult> = {}
-      let done = 0
+      const BATCH = 4;
+      const results: Record<string, BulkActivationResult> = {};
+      let done = 0;
 
       for (let i = 0; i < convLayers.length; i += BATCH) {
-        const batch = convLayers.slice(i, i + BATCH)
-        const batchResults = await inferenceApi.getBulkActivations(modelId, imageFile, batch, 16)
-        Object.assign(results, batchResults)
-        done += batch.length
-        setProgress(Math.round((done / convLayers.length) * 100))
+        const batch = convLayers.slice(i, i + BATCH);
+        const batchResults = await inferenceApi.getBulkActivations(modelId, imageFile, batch, 16);
+        Object.assign(results, batchResults);
+        done += batch.length;
+        setProgress(Math.round((done / convLayers.length) * 100));
       }
 
-      setBulkResults(results)
+      setBulkResults(results);
       // Auto-select first successful layer
-      const firstSuccess = Object.keys(results).find((k) => results[k].success)
-      if (firstSuccess) setSelectedLayer(firstSuccess)
+      const firstSuccess = Object.keys(results).find((k) => results[k].success);
+      if (firstSuccess) setSelectedLayer(firstSuccess);
 
       // Lift activation data up to VisualizationPage so ModelViewer can use it for 3D expansion.
       // Convert BulkActivationResult → Record<layerName, number[][]> (flat per-channel arrays).
       if (onActivationsExtracted) {
-        const flatData: Record<string, number[][]> = {}
+        const flatData: Record<string, number[][]> = {};
         for (const [layerName, result] of Object.entries(results)) {
           if (result.success && result.activation_maps) {
             flatData[layerName] = result.activation_maps.map((ch) =>
               Array.isArray(ch[0]) ? (ch as number[][]).flat() : (ch as unknown as number[])
-            )
+            );
           }
         }
-        onActivationsExtracted(flatData)
+        onActivationsExtracted(flatData);
       }
     } catch (err: unknown) {
-      setError((err as { message?: string })?.message ?? 'Extraction failed')
+      setError((err as { message?: string })?.message ?? 'Extraction failed');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Cleanup object URL
   useEffect(() => {
-    return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl) }
-  }, [imagePreviewUrl])
+    return () => {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
 
-  const selectedResult = selectedLayer ? bulkResults?.[selectedLayer] : null
+  const selectedResult = selectedLayer ? bulkResults?.[selectedLayer] : null;
 
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction="row" alignItems="center" spacing={1} mb={2}>
         <FeatureMapIcon color="primary" />
         <Typography variant="h6">Feature Maps</Typography>
-        <Chip
-          label="Important"
-          size="small"
-          color="warning"
-          sx={{ fontSize: '0.65rem' }}
-        />
+        <Chip label="Important" size="small" color="warning" sx={{ fontSize: '0.65rem' }} />
       </Stack>
 
       <Typography variant="body2" color="text.secondary" mb={2}>
-        Upload an image to extract and visualize intermediate layer activations.
-        Each channel shows what patterns the layer detects in the input.
+        Upload an image to extract and visualize intermediate layer activations. Each channel shows
+        what patterns the layer detects in the input.
       </Typography>
 
       {/* Upload area */}
@@ -294,14 +330,17 @@ function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProp
               <IconButton
                 size="small"
                 onClick={() => {
-                  setImageFile(null)
-                  setImagePreviewUrl(null)
-                  setBulkResults(null)
-                  setSelectedLayer(null)
+                  setImageFile(null);
+                  setImagePreviewUrl(null);
+                  setBulkResults(null);
+                  setSelectedLayer(null);
                 }}
                 sx={{
-                  position: 'absolute', top: 4, right: 4,
-                  backgroundColor: 'rgba(0,0,0,0.6)', color: 'white',
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: 'white',
                   '&:hover': { backgroundColor: 'rgba(0,0,0,0.8)' },
                 }}
               >
@@ -354,7 +393,9 @@ function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProp
               <Stack direction="row" spacing={1}>
                 <Button
                   variant="contained"
-                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FeatureMapIcon />}
+                  startIcon={
+                    loading ? <CircularProgress size={16} color="inherit" /> : <FeatureMapIcon />
+                  }
                   onClick={handleExtract}
                   disabled={loading || convLayers.length === 0}
                   sx={{ flex: 1 }}
@@ -400,8 +441,8 @@ function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProp
                   color={selectedLayer === layerName ? 'primary' : 'default'}
                   variant={selectedLayer === layerName ? 'filled' : 'outlined'}
                   onClick={() => {
-                    setSelectedLayer(layerName)
-                    setSelectedChannel(undefined)
+                    setSelectedLayer(layerName);
+                    setSelectedChannel(undefined);
                   }}
                   disabled={!result.success}
                   sx={{ cursor: 'pointer', fontSize: '0.65rem' }}
@@ -430,27 +471,50 @@ function FeatureMapsSection({ modelId, onActivationsExtracted }: FeatureMapsProp
         </>
       )}
     </Paper>
-  )
+  );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function VisualizationPage() {
-  const [searchParams] = useSearchParams()
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    searchParams.get('model') ?? ''
-  )
+  const [searchParams] = useSearchParams();
+  const [selectedModelId, setSelectedModelId] = useState<string>(searchParams.get('model') ?? '');
   // Activation data extracted by FeatureMapsSection — passed to ModelViewer for 3D expansion
-  const [extractedActivations, setExtractedActivations] = useState<Record<string, number[][]>>({})
+  const [extractedActivations, setExtractedActivations] = useState<Record<string, number[][]>>({});
+  // Selected layer for explanation sidebar
+  const [selectedLayer, setSelectedLayer] = useState<ArchitectureLayer | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Streaming inference for data flow animation
+  const { state: streamingState } = useStreamingInference();
+
+  // Extract active layer index from streaming state
+  const activeLayerIndex =
+    streamingState.status === 'running' && streamingState.processedLayers.length > 0
+      ? streamingState.processedLayers[streamingState.processedLayers.length - 1].layer_index
+      : undefined;
+
+  const handleLayerClick = (layer: ArchitectureLayer) => {
+    setSelectedLayer(layer);
+    setSidebarOpen(true);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
 
   useEffect(() => {
-    const urlModel = searchParams.get('model')
-    if (urlModel && urlModel !== selectedModelId) setSelectedModelId(urlModel)
-  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+    const urlModel = searchParams.get('model');
+    if (urlModel && urlModel !== selectedModelId) setSelectedModelId(urlModel);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data: models = [], isLoading: modelsLoading, error: modelsError } = useQuery({
+  const {
+    data: models = [],
+    isLoading: modelsLoading,
+    error: modelsError,
+  } = useQuery({
     queryKey: ['models'],
     queryFn: () => modelsApi.getModels(),
-  })
+  });
 
   return (
     <PageContainer
@@ -525,15 +589,17 @@ export default function VisualizationPage() {
             <AccordionDetails>
               <Stack spacing={0.5}>
                 {[
-                  ['Left drag',   'Rotate'],
-                  ['Right drag',  'Pan'],
-                  ['Scroll',      'Zoom'],
+                  ['Left drag', 'Rotate'],
+                  ['Right drag', 'Pan'],
+                  ['Scroll', 'Zoom'],
                   ['Click layer', 'Inspect + feature maps'],
-                  ['Layer list',  'Browse all layers'],
+                  ['Layer list', 'Browse all layers'],
                   ['Feature Maps tab', 'Upload image & extract'],
                 ].map(([key, action]) => (
                   <Stack key={key} direction="row" justifyContent="space-between">
-                    <Typography variant="caption" color="text.secondary">{key}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {key}
+                    </Typography>
                     <Typography variant="caption">{action}</Typography>
                   </Stack>
                 ))}
@@ -543,17 +609,21 @@ export default function VisualizationPage() {
         </Grid>
 
         {/* ── Main canvas ── */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={sidebarOpen ? 6 : 9}>
           <ModelViewer
             modelId={selectedModelId || undefined}
-            externalActivationData={Object.keys(extractedActivations).length > 0 ? extractedActivations : undefined}
+            externalActivationData={
+              Object.keys(extractedActivations).length > 0 ? extractedActivations : undefined
+            }
+            onLayerClick={handleLayerClick}
+            activeLayerIndex={activeLayerIndex}
           />
 
           {!selectedModelId && (
             <Box sx={{ mt: 2 }}>
               <Alert severity="info">
-                Select a model from the sidebar to visualize its real architecture.
-                The demo shows a sample 7-layer network.
+                Select a model from the sidebar to visualize its real architecture. The demo shows a
+                sample 7-layer network.
               </Alert>
             </Box>
           )}
@@ -578,9 +648,20 @@ export default function VisualizationPage() {
             )}
           </Box>
         </Grid>
+
+        {/* ── Right sidebar (Layer Explanation) ── */}
+        {sidebarOpen && (
+          <Grid item xs={12} md={3}>
+            <LayerExplanationSidebar
+              open={sidebarOpen}
+              layer={selectedLayer}
+              onClose={handleSidebarClose}
+            />
+          </Grid>
+        )}
       </Grid>
     </PageContainer>
-  )
+  );
 }
 
 // Made with Bob

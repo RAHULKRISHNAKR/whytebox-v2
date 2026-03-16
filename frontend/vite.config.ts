@@ -1,10 +1,10 @@
-import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, process.cwd(), '');
 
   return {
     plugins: [react()],
@@ -27,7 +27,12 @@ export default defineConfig(({ mode }) => {
             // State management
             'state-vendor': ['@reduxjs/toolkit', 'react-redux', 'zustand'],
             // UI library
-            'mui-vendor': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+            'mui-vendor': [
+              '@mui/material',
+              '@mui/icons-material',
+              '@emotion/react',
+              '@emotion/styled',
+            ],
             // Data fetching
             'query-vendor': ['@tanstack/react-query', 'axios'],
             // BabylonJS (large — separate chunk)
@@ -57,6 +62,7 @@ export default defineConfig(({ mode }) => {
           target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '5001'}`,
           changeOrigin: true,
           secure: false,
+          ws: true, // Enable WebSocket support for /api/v1/ws/* endpoints
         },
         '/ws': {
           target: `http://127.0.0.1:${env.VITE_BACKEND_PORT || '5001'}`,
@@ -83,7 +89,7 @@ export default defineConfig(({ mode }) => {
         'zustand',
       ],
       exclude: [
-        '@babylonjs/core',  // BabylonJS uses ESM — exclude from pre-bundling
+        '@babylonjs/core', // BabylonJS uses ESM — exclude from pre-bundling
       ],
     },
 
@@ -91,7 +97,7 @@ export default defineConfig(({ mode }) => {
       // Make env vars available at build time
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
     },
-  }
-})
+  };
+});
 
 // Made with Bob

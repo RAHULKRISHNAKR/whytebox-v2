@@ -143,6 +143,7 @@ async def explain_gradcam(
         # ── Grad-CAM implementation ──────────────────────────────────────────
         activations_store = {}
         gradients_store = {}
+        all_layer_gradients = {}
 
         def forward_hook(module, inp, out):
             activations_store["value"] = out
@@ -165,6 +166,21 @@ async def explain_gradcam(
         fwd_handle = target_module.register_forward_hook(forward_hook)
         bwd_handle = target_module.register_full_backward_hook(backward_hook)
 
+        # Register hooks on all conv/linear layers for contribution scores
+        import torch.nn as nn
+        layer_handles = []
+
+        def make_grad_hook(layer_name):
+            def grad_hook(module, grad_in, grad_out):
+                if grad_out[0] is not None:
+                    all_layer_gradients[layer_name] = grad_out[0].detach()
+            return grad_hook
+
+        for name, mod in model.named_modules():
+            if isinstance(mod, (nn.Conv2d, nn.Conv1d, nn.Linear)):
+                handle = mod.register_full_backward_hook(make_grad_hook(name))
+                layer_handles.append(handle)
+
         try:
             input_tensor = torch.from_numpy(processed).float().unsqueeze(0)
             input_tensor.requires_grad_(True)
@@ -186,6 +202,8 @@ async def explain_gradcam(
         finally:
             fwd_handle.remove()
             bwd_handle.remove()
+            for handle in layer_handles:
+                handle.remove()
 
         if "value" not in activations_store or "value" not in gradients_store:
             raise HTTPException(status_code=500, detail="Failed to capture Grad-CAM data")
@@ -233,6 +251,23 @@ async def explain_gradcam(
         except Exception:
             class_name = f"class_{target_class}"
 
+        # Compute layer contributions from captured gradients
+        layer_contributions = {}
+        if all_layer_gradients:
+            contributions = {}
+            for layer_name, grad_tensor in all_layer_gradients.items():
+                mean_abs_grad = torch.mean(torch.abs(grad_tensor)).item()
+                contributions[layer_name] = mean_abs_grad
+
+            # Normalize to 0.0-1.0 range
+            if contributions:
+                max_contrib = max(contributions.values())
+                if max_contrib > 0:
+                    layer_contributions = {
+                        name: score / max_contrib
+                        for name, score in contributions.items()
+                    }
+
         return {
             "success": True,
             "method": "Grad-CAM",
@@ -245,6 +280,7 @@ async def explain_gradcam(
             "heatmap": _array_to_base64(heatmap_colored),
             "overlay": _array_to_base64(overlay),
             "heatmap_data": cam_np.tolist(),  # raw values for frontend rendering
+            "layer_contributions": layer_contributions,
         }
 
     except HTTPException:

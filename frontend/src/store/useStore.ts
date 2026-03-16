@@ -1,12 +1,6 @@
+import type { Model, Notification, User, VisualizationConfig, VisualizationState } from '@/types';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type {
-  Model,
-  VisualizationConfig,
-  VisualizationState,
-  User,
-  Notification,
-} from '@/types';
 
 interface AppState {
   // User state
@@ -28,6 +22,19 @@ interface AppState {
   visualizationState: VisualizationState;
   setVisualizationConfig: (config: Partial<VisualizationConfig>) => void;
   setVisualizationState: (state: Partial<VisualizationState>) => void;
+
+  /**
+   * Layer contribution scores from Grad-CAM explainability analysis.
+   *
+   * CROSS-PAGE CONNECTION:
+   * - Set by: Explainability page (after running Grad-CAM)
+   * - Read by: ModelViewer component (applies colors to 3D meshes)
+   *
+   * This enables the workflow: Run Grad-CAM → Switch to Visualization →
+   * See which layers contributed most (red=high, orange=medium, blue=low)
+   */
+  setLayerContributions: (contributions: Record<string, number> | null) => void;
+  clearLayerContributions: () => void;
 
   // UI state
   sidebarOpen: boolean;
@@ -67,6 +74,8 @@ const defaultVisualizationState: VisualizationState = {
   isAnimating: false,
   currentStep: 0,
   totalSteps: 0,
+  // Layer contribution scores from Grad-CAM (set by Explainability page, read by ModelViewer)
+  layerContributions: null,
 };
 
 export const useStore = create<AppState>()(
@@ -105,6 +114,20 @@ export const useStore = create<AppState>()(
           set((state) => ({
             visualizationState: { ...state.visualizationState, ...visualState },
           })),
+        setLayerContributions: (contributions) =>
+          set((state) => ({
+            visualizationState: {
+              ...state.visualizationState,
+              layerContributions: contributions,
+            },
+          })),
+        clearLayerContributions: () =>
+          set((state) => ({
+            visualizationState: {
+              ...state.visualizationState,
+              layerContributions: null,
+            },
+          })),
 
         // UI state
         sidebarOpen: true,
@@ -130,17 +153,14 @@ export const useStore = create<AppState>()(
           })),
         markNotificationRead: (id) =>
           set((state) => ({
-            notifications: state.notifications.map((n) =>
-              n.id === id ? { ...n, read: true } : n
-            ),
+            notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
           })),
         clearNotifications: () => set({ notifications: [] }),
 
         // Loading states
         isLoading: false,
         loadingMessage: '',
-        setLoading: (loading, message = '') =>
-          set({ isLoading: loading, loadingMessage: message }),
+        setLoading: (loading, message = '') => set({ isLoading: loading, loadingMessage: message }),
 
         // Error state
         error: null,
@@ -168,6 +188,7 @@ export const useVisualizationConfig = () => useStore((state) => state.visualizat
 export const useVisualizationState = () => useStore((state) => state.visualizationState);
 export const useNotifications = () => useStore((state) => state.notifications);
 export const useTheme = () => useStore((state) => state.theme);
-export const useLoading = () => useStore((state) => ({ isLoading: state.isLoading, loadingMessage: state.loadingMessage }));
+export const useLoading = () =>
+  useStore((state) => ({ isLoading: state.isLoading, loadingMessage: state.loadingMessage }));
 
 // Made with Bob

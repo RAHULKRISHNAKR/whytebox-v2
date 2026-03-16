@@ -14,59 +14,60 @@
  *   - Educational method descriptions
  */
 
-import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import PageContainer from '@/components/common/PageContainer';
 import {
-  Box,
-  Grid,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  CircularProgress,
-  Paper,
-  Typography,
-  Checkbox,
-  FormGroup,
-  FormControlLabel,
-  Divider,
-  Stack,
-  Chip,
-  Tab,
-  Tabs,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material'
+  DEFAULT_GRADCAM_PARAMS,
+  DEFAULT_IG_PARAMS,
+  DEFAULT_SALIENCY_PARAMS,
+  GradCAMParamsPanel,
+  IGParamsPanel,
+  SaliencyParamsPanel,
+  type GradCAMParams,
+  type IGParams,
+  type SaliencyParams,
+} from '@/components/explainability/ExplainabilityParams';
+import ImageUpload from '@/components/inference/ImageUpload';
+import { explainabilityApi } from '@/services/api/explainability';
+import { modelsApi } from '@/services/api/models';
+import { useStore } from '@/store/useStore';
+import type { CompareMethodResult, ExplainabilityResponse } from '@/types/api';
 import {
   CompareArrows,
-  Refresh,
-  Info as InfoIcon,
   Download as DownloadIcon,
   ExpandMore,
+  Info as InfoIcon,
+  Refresh,
   Tune as TuneIcon,
-} from '@mui/icons-material'
-import PageContainer from '@/components/common/PageContainer'
-import ImageUpload from '@/components/inference/ImageUpload'
+} from '@mui/icons-material';
 import {
-  GradCAMParamsPanel,
-  SaliencyParamsPanel,
-  IGParamsPanel,
-  DEFAULT_GRADCAM_PARAMS,
-  DEFAULT_SALIENCY_PARAMS,
-  DEFAULT_IG_PARAMS,
-  type GradCAMParams,
-  type SaliencyParams,
-  type IGParams,
-} from '@/components/explainability/ExplainabilityParams'
-import { modelsApi } from '@/services/api/models'
-import { explainabilityApi } from '@/services/api/explainability'
-import type { ExplainabilityResponse, CompareMethodResult } from '@/types/api'
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Tab,
+  Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 // ─── Method metadata ──────────────────────────────────────────────────────────
 
@@ -89,25 +90,19 @@ const METHOD_INFO: Record<string, { label: string; description: string; color: s
       'Path-integrated gradients from a baseline to the input satisfy sensitivity and implementation invariance axioms.',
     color: '#9C27B0',
   },
-}
+};
 
 // ─── Heatmap result card ──────────────────────────────────────────────────────
 
-function HeatmapCard({
-  methodKey,
-  result,
-}: {
-  methodKey: string
-  result: CompareMethodResult
-}) {
-  const info = METHOD_INFO[methodKey] ?? { label: result.name, description: '', color: '#666' }
+function HeatmapCard({ methodKey, result }: { methodKey: string; result: CompareMethodResult }) {
+  const info = METHOD_INFO[methodKey] ?? { label: result.name, description: '', color: '#666' };
 
   const handleDownload = () => {
-    const a = document.createElement('a')
-    a.href = `data:image/png;base64,${result.overlay}`
-    a.download = `${methodKey}_overlay.png`
-    a.click()
-  }
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${result.overlay}`;
+    a.download = `${methodKey}_overlay.png`;
+    a.click();
+  };
 
   return (
     <Paper sx={{ p: 2, height: '100%' }}>
@@ -140,7 +135,7 @@ function HeatmapCard({
         {info.description}
       </Typography>
     </Paper>
-  )
+  );
 }
 
 // ─── Side-by-side comparison view ────────────────────────────────────────────
@@ -151,12 +146,12 @@ function ComparisonView({
   predictedClass,
   confidence,
 }: {
-  methods: Record<string, CompareMethodResult>
-  originalUrl: string
-  predictedClass: string
-  confidence: number
+  methods: Record<string, CompareMethodResult>;
+  originalUrl: string;
+  predictedClass: string;
+  confidence: number;
 }) {
-  const entries = Object.entries(methods)
+  const entries = Object.entries(methods);
 
   return (
     <Box>
@@ -217,7 +212,7 @@ function ComparisonView({
         </Stack>
       </Paper>
     </Box>
-  )
+  );
 }
 
 // ─── Single method result view ────────────────────────────────────────────────
@@ -226,18 +221,18 @@ function SingleMethodView({
   result,
   originalUrl,
 }: {
-  result: ExplainabilityResponse
-  originalUrl: string
+  result: ExplainabilityResponse;
+  originalUrl: string;
 }) {
-  const [tab, setTab] = useState(0)
-  const methodLabel = METHOD_INFO[result.method]?.label ?? result.method
+  const [tab, setTab] = useState(0);
+  const methodLabel = METHOD_INFO[result.method]?.label ?? result.method;
 
   const handleDownload = (type: 'overlay' | 'heatmap') => {
-    const a = document.createElement('a')
-    a.href = `data:image/png;base64,${type === 'overlay' ? result.overlay : result.heatmap}`
-    a.download = `${result.method}_${type}.png`
-    a.click()
-  }
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${type === 'overlay' ? result.overlay : result.heatmap}`;
+    a.download = `${result.method}_${type}.png`;
+    a.click();
+  };
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -249,12 +244,22 @@ function SingleMethodView({
         </Tabs>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Download overlay">
-            <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownload('overlay')}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => handleDownload('overlay')}
+            >
               Overlay
             </Button>
           </Tooltip>
           <Tooltip title="Download heatmap">
-            <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownload('heatmap')}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => handleDownload('heatmap')}
+            >
               Heatmap
             </Button>
           </Tooltip>
@@ -289,28 +294,36 @@ function SingleMethodView({
       <Divider sx={{ my: 2 }} />
       <Stack direction="row" spacing={3} flexWrap="wrap">
         <Box>
-          <Typography variant="caption" color="text.secondary">Method</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Method
+          </Typography>
           <Typography variant="body2">{methodLabel}</Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">Predicted Class</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Predicted Class
+          </Typography>
           <Typography variant="body2">
             {result.predicted_class_name} (#{result.predicted_class})
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">Confidence</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Confidence
+          </Typography>
           <Typography variant="body2">{Math.round(result.confidence * 100)}%</Typography>
         </Box>
         {result.compute_time_ms !== undefined && (
           <Box>
-            <Typography variant="caption" color="text.secondary">Compute Time</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Compute Time
+            </Typography>
             <Typography variant="body2">{result.compute_time_ms.toFixed(0)} ms</Typography>
           </Box>
         )}
       </Stack>
     </Paper>
-  )
+  );
 }
 
 // ─── Advanced params accordion ────────────────────────────────────────────────
@@ -325,14 +338,14 @@ function AdvancedParamsAccordion({
   onSaliencyChange,
   onIGChange,
 }: {
-  method: 'gradcam' | 'saliency' | 'integrated_gradients'
-  modelId: string
-  gradcamParams: GradCAMParams
-  saliencyParams: SaliencyParams
-  igParams: IGParams
-  onGradcamChange: (p: GradCAMParams) => void
-  onSaliencyChange: (p: SaliencyParams) => void
-  onIGChange: (p: IGParams) => void
+  method: 'gradcam' | 'saliency' | 'integrated_gradients';
+  modelId: string;
+  gradcamParams: GradCAMParams;
+  saliencyParams: SaliencyParams;
+  igParams: IGParams;
+  onGradcamChange: (p: GradCAMParams) => void;
+  onSaliencyChange: (p: SaliencyParams) => void;
+  onIGChange: (p: IGParams) => void;
 }) {
   return (
     <Accordion>
@@ -344,11 +357,7 @@ function AdvancedParamsAccordion({
       </AccordionSummary>
       <AccordionDetails>
         {method === 'gradcam' && (
-          <GradCAMParamsPanel
-            modelId={modelId}
-            params={gradcamParams}
-            onChange={onGradcamChange}
-          />
+          <GradCAMParamsPanel modelId={modelId} params={gradcamParams} onChange={onGradcamChange} />
         )}
         {method === 'saliency' && (
           <SaliencyParamsPanel params={saliencyParams} onChange={onSaliencyChange} />
@@ -358,121 +367,144 @@ function AdvancedParamsAccordion({
         )}
       </AccordionDetails>
     </Accordion>
-  )
+  );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Explainability() {
-  const [selectedModelId, setSelectedModelId] = useState<string>('')
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
-  const [targetClass, setTargetClass] = useState<string>('')
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [targetClass, setTargetClass] = useState<string>('');
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(
     new Set(['gradcam', 'saliency', 'integrated_gradients'])
-  )
-  const [useCompare, setUseCompare] = useState<'compare' | 'single'>('compare')
-  const [singleMethod, setSingleMethod] = useState<'gradcam' | 'saliency' | 'integrated_gradients'>('gradcam')
+  );
+  const [useCompare, setUseCompare] = useState<'compare' | 'single'>('compare');
+  const [singleMethod, setSingleMethod] = useState<'gradcam' | 'saliency' | 'integrated_gradients'>(
+    'gradcam'
+  );
 
   // Per-method advanced params
-  const [gradcamParams, setGradcamParams] = useState<GradCAMParams>(DEFAULT_GRADCAM_PARAMS)
-  const [saliencyParams, setSaliencyParams] = useState<SaliencyParams>(DEFAULT_SALIENCY_PARAMS)
-  const [igParams, setIGParams] = useState<IGParams>(DEFAULT_IG_PARAMS)
+  const [gradcamParams, setGradcamParams] = useState<GradCAMParams>(DEFAULT_GRADCAM_PARAMS);
+  const [saliencyParams, setSaliencyParams] = useState<SaliencyParams>(DEFAULT_SALIENCY_PARAMS);
+  const [igParams, setIGParams] = useState<IGParams>(DEFAULT_IG_PARAMS);
 
   // Results
   const [compareMethods, setCompareMethods] = useState<{
-    methods: Record<string, CompareMethodResult>
-    predictedClass: string
-    confidence: number
-  } | null>(null)
-  const [singleResult, setSingleResult] = useState<ExplainabilityResponse | null>(null)
+    methods: Record<string, CompareMethodResult>;
+    predictedClass: string;
+    confidence: number;
+  } | null>(null);
+  const [singleResult, setSingleResult] = useState<ExplainabilityResponse | null>(null);
 
   // Fetch models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
     queryKey: ['models'],
     queryFn: () => modelsApi.getModels(),
-  })
+  });
 
   // Compare mutation
   const compareMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedModelId || !uploadedFile) throw new Error('Model and image required')
-      const tc = targetClass ? parseInt(targetClass) : undefined
-      return explainabilityApi.compare(selectedModelId, uploadedFile, tc)
+      if (!selectedModelId || !uploadedFile) throw new Error('Model and image required');
+      const tc = targetClass ? parseInt(targetClass) : undefined;
+      return explainabilityApi.compare(selectedModelId, uploadedFile, tc);
     },
     onSuccess: (data) => {
       setCompareMethods({
         methods: data.methods,
         predictedClass: data.predicted_class_name,
         confidence: data.confidence,
-      })
-      setSingleResult(null)
+      });
+      setSingleResult(null);
+
+      // Dispatch layer contributions from Grad-CAM result in compare mode
+      const gradcamResult = data.methods['gradcam'];
+      if (gradcamResult?.layer_contributions) {
+        useStore.getState().setLayerContributions(gradcamResult.layer_contributions);
+      } else {
+        useStore.getState().clearLayerContributions();
+      }
     },
-  })
+  });
 
   // Single method mutation — passes advanced params
   const singleMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedModelId || !uploadedFile) throw new Error('Model and image required')
-      const tc = targetClass ? parseInt(targetClass) : undefined
+      if (!selectedModelId || !uploadedFile) throw new Error('Model and image required');
+      const tc = targetClass ? parseInt(targetClass) : undefined;
 
       switch (singleMethod) {
         case 'gradcam':
           return explainabilityApi.gradcam(selectedModelId, uploadedFile, {
             ...gradcamParams,
             target_class: tc ?? gradcamParams.target_class,
-          })
+          });
         case 'saliency':
           return explainabilityApi.saliency(selectedModelId, uploadedFile, {
             ...saliencyParams,
             target_class: tc ?? saliencyParams.target_class,
-          })
+          });
         case 'integrated_gradients':
           return explainabilityApi.integratedGradients(selectedModelId, uploadedFile, {
             ...igParams,
             target_class: tc ?? igParams.target_class,
-          })
+          });
       }
     },
     onSuccess: (data) => {
-      setSingleResult(data)
-      setCompareMethods(null)
-    },
-  })
+      setSingleResult(data);
+      setCompareMethods(null);
 
-  const activeMutation = useCompare === 'compare' ? compareMutation : singleMutation
+      // Dispatch layer contributions only for Grad-CAM
+      if (singleMethod === 'gradcam' && data.layer_contributions) {
+        useStore.getState().setLayerContributions(data.layer_contributions);
+      } else {
+        useStore.getState().clearLayerContributions();
+      }
+    },
+  });
+
+  const activeMutation = useCompare === 'compare' ? compareMutation : singleMutation;
 
   const handleMethodToggle = (method: string) => {
     setSelectedMethods((prev) => {
-      const next = new Set(prev)
-      next.has(method) ? next.delete(method) : next.add(method)
-      return next
-    })
-  }
+      const next = new Set(prev);
+      next.has(method) ? next.delete(method) : next.add(method);
+      return next;
+    });
+  };
 
   const handleImageSelect = (file: File) => {
-    setUploadedFile(file)
-    setUploadedImageUrl(URL.createObjectURL(file))
-  }
+    setUploadedFile(file);
+    setUploadedImageUrl(URL.createObjectURL(file));
+  };
 
   const handleReset = () => {
-    setUploadedFile(null)
-    setUploadedImageUrl(null)
-    setCompareMethods(null)
-    setSingleResult(null)
-    setTargetClass('')
-    compareMutation.reset()
-    singleMutation.reset()
-  }
+    setUploadedFile(null);
+    setUploadedImageUrl(null);
+    setCompareMethods(null);
+    setSingleResult(null);
+    setTargetClass('');
+    compareMutation.reset();
+    singleMutation.reset();
+  };
 
   const handleGenerate = () => {
-    if (!selectedModelId) { alert('Please select a model'); return }
-    if (!uploadedFile) { alert('Please upload an image'); return }
-    activeMutation.mutate()
-  }
+    if (!selectedModelId) {
+      alert('Please select a model');
+      return;
+    }
+    if (!uploadedFile) {
+      alert('Please upload an image');
+      return;
+    }
+    activeMutation.mutate();
+  };
 
-  const canGenerate = !!selectedModelId && !!uploadedFile && !activeMutation.isPending
-  const canReset = !!uploadedFile || !!compareMethods || !!singleResult
+  const canGenerate = !!selectedModelId && !!uploadedFile && !activeMutation.isPending;
+  const canReset = !!uploadedFile || !!compareMethods || !!singleResult;
 
   return (
     <PageContainer
@@ -519,22 +551,31 @@ export default function Explainability() {
 
           {/* Image upload */}
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>Upload Image</Typography>
+            <Typography variant="h6" gutterBottom>
+              Upload Image
+            </Typography>
             <ImageUpload
               onImageSelect={handleImageSelect}
-              onImageRemove={() => { setUploadedFile(null); setUploadedImageUrl(null) }}
+              onImageRemove={() => {
+                setUploadedFile(null);
+                setUploadedImageUrl(null);
+              }}
             />
           </Box>
 
           {/* Method selection */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>Methods</Typography>
+            <Typography variant="h6" gutterBottom>
+              Methods
+            </Typography>
 
             {/* Compare vs single toggle */}
             <ToggleButtonGroup
               value={useCompare}
               exclusive
-              onChange={(_, v) => { if (v) setUseCompare(v) }}
+              onChange={(_, v) => {
+                if (v) setUseCompare(v);
+              }}
               size="small"
               fullWidth
               sx={{ mb: 2 }}
@@ -587,9 +628,7 @@ export default function Explainability() {
                   <InputLabel>Method</InputLabel>
                   <Select
                     value={singleMethod}
-                    onChange={(e) =>
-                      setSingleMethod(e.target.value as typeof singleMethod)
-                    }
+                    onChange={(e) => setSingleMethod(e.target.value as typeof singleMethod)}
                     label="Method"
                   >
                     {Object.entries(METHOD_INFO).map(([key, info]) => (
@@ -661,9 +700,11 @@ export default function Explainability() {
               size="large"
               fullWidth
               startIcon={
-                activeMutation.isPending
-                  ? <CircularProgress size={20} color="inherit" />
-                  : <CompareArrows />
+                activeMutation.isPending ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <CompareArrows />
+                )
               }
               onClick={handleGenerate}
               disabled={!canGenerate}
@@ -688,7 +729,9 @@ export default function Explainability() {
 
         {/* ── Right: Results ── */}
         <Grid item xs={12} md={8}>
-          <Typography variant="h6" gutterBottom>Explainability Results</Typography>
+          <Typography variant="h6" gutterBottom>
+            Explainability Results
+          </Typography>
 
           {activeMutation.isPending && (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -697,7 +740,11 @@ export default function Explainability() {
                 Generating explainability visualizations…
               </Typography>
               {useCompare === 'compare' && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: 1 }}
+                >
                   Running all three methods in parallel — this may take 30–60 seconds.
                 </Typography>
               )}
@@ -723,14 +770,17 @@ export default function Explainability() {
             <SingleMethodView result={singleResult} originalUrl={uploadedImageUrl} />
           )}
 
-          {!activeMutation.isPending && !compareMethods && !singleResult && !activeMutation.error && (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Upload an image, select a model, and click <strong>Generate</strong> to visualize
-                explanations.
-              </Typography>
-            </Paper>
-          )}
+          {!activeMutation.isPending &&
+            !compareMethods &&
+            !singleResult &&
+            !activeMutation.error && (
+              <Paper sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Upload an image, select a model, and click <strong>Generate</strong> to visualize
+                  explanations.
+                </Typography>
+              </Paper>
+            )}
 
           {/* Educational method descriptions */}
           {!activeMutation.isPending && (
@@ -740,10 +790,7 @@ export default function Explainability() {
               </Typography>
               <Stack spacing={1.5}>
                 {Object.entries(METHOD_INFO).map(([key, info]) => (
-                  <Box
-                    key={key}
-                    sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}
-                  >
+                  <Box key={key} sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
                       <Box
                         sx={{
@@ -769,7 +816,7 @@ export default function Explainability() {
         </Grid>
       </Grid>
     </PageContainer>
-  )
+  );
 }
 
 // Made with Bob

@@ -61,6 +61,7 @@ export interface VisualizationState {
   isAnimating: boolean;
   currentStep: number;
   totalSteps: number;
+  layerContributions: Record<string, number> | null;
 }
 
 // Inference types
